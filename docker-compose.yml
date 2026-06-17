@@ -14,8 +14,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-    networks:
-      - app
 
   backend:
     build:
@@ -39,8 +37,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - app
 
   frontend:
     build:
@@ -58,12 +54,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - app
-
-networks:
-  app:
-    driver: bridge
 
 volumes:
   postgres_data:
