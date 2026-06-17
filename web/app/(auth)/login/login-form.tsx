@@ -7,27 +7,69 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  validateEmail,
+  validatePassword,
+  validateName,
+  type FormErrors,
+} from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import {
+  resendConfirmation,
+  requestPasswordReset,
+} from "@/lib/actions/auth";
 
 type Mode = "login" | "register";
+type View = "form" | "verify-email" | "forgot-password" | "reset-sent";
 
 export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/";
+  const authError = searchParams.get("error");
 
+  const [view, setView] = useState<View>("form");
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
+  // ── Field-level validation on blur ───────────────────────────────────────
+  function validateField(field: "email" | "password" | "name") {
+    setErrors((prev) => ({
+      ...prev,
+      [field]:
+        field === "email"
+          ? validateEmail(email)
+          : field === "password"
+            ? validatePassword(password)
+            : mode === "register"
+              ? validateName(fullName)
+              : null,
+    }));
+  }
+
+  // ── Submit handler for login + register ──────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    setLoading(true);
+    setSubmitError(null);
+    setInfo(null);
 
+    // Full validation before submit.
+    const nextErrors: FormErrors = {
+      email: validateEmail(email),
+      password: validatePassword(password),
+      name: mode === "register" ? validateName(fullName) : null,
+    };
+    setErrors(nextErrors);
+    if (nextErrors.email || nextErrors.password || nextErrors.name) return;
+
+    setLoading(true);
     try {
       const supabase = createBrowserSupabaseClient();
 
@@ -36,28 +78,254 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
           email,
           password,
         });
-        if (error) throw error;
+        if (error) {
+          // Supabase returns "Email not confirmed" when confirmation is
+          // required and the user hasn't clicked the link yet.
+          if (error.message.toLowerCase().includes("not confirmed")) {
+            setView("verify-email");
+            return;
+          }
+          // Don't leak whether the email exists — generic message for
+          // invalid credentials.
+          if (
+            error.message.toLowerCase().includes("invalid login") ||
+            error.message.toLowerCase().includes("invalid credentials")
+          ) {
+            throw new Error("Incorrect email or password");
+          }
+          throw error;
+        }
+        router.push(redirect);
+        router.refresh();
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { full_name: fullName } },
         });
         if (error) throw error;
-      }
 
-      // Session cookie is set by @supabase/ssr; refresh route state.
-      router.push(redirect);
-      router.refresh();
+        // If email confirmation is enabled, no session is returned — show
+        // the "check your email" view. If confirmation is disabled, a
+        // session is returned and we redirect.
+        if (data.session) {
+          router.push(redirect);
+          router.refresh();
+        } else {
+          setView("verify-email");
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setSubmitError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
   }
 
+  // ── Resend confirmation email ────────────────────────────────────────────
+  async function handleResend() {
+    setActionLoading(true);
+    setInfo(null);
+    setSubmitError(null);
+    try {
+      const res = await resendConfirmation(email);
+      if ("error" in res) throw new Error(res.error);
+      setInfo("Confirmation email sent. Check your inbox (and spam folder).");
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error ? err.message : "Could not resend email",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // ── Forgot password ──────────────────────────────────────────────────────
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    const emailErr = validateEmail(email);
+    setErrors({ email: emailErr });
+    if (emailErr) return;
+
+    setActionLoading(true);
+    setSubmitError(null);
+    try {
+      const res = await requestPasswordReset(email);
+      if ("error" in res) throw new Error(res.error);
+      setView("reset-sent");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Request failed");
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  // ── Reset state when switching modes ─────────────────────────────────────
+  function switchMode(next: Mode) {
+    setMode(next);
+    setErrors({});
+    setSubmitError(null);
+    setInfo(null);
+  }
+
+  // ── Auth-callback error (from /auth/callback) ────────────────────────────
+  if (authError === "auth_callback_failed" && view === "form") {
+    // Shown inline; the param is cleared on next navigation.
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VERIFY EMAIL VIEW
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (view === "verify-email") {
+    return (
+      <AuthShell>
+        <Card>
+          <CardContent className="pt-6 flex flex-col items-center text-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-2xl">
+              📬
+            </div>
+            <h2 className="text-lg font-bold text-foreground">Check your email</h2>
+            <p className="text-sm text-muted-foreground">
+              We sent a confirmation link to
+              <br />
+              <span className="font-medium text-foreground">{email}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Click the link in the email to verify your account, then sign in.
+            </p>
+
+            {submitError && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2 w-full">
+                {submitError}
+              </p>
+            )}
+            {info && (
+              <p className="text-sm text-primary bg-primary/10 border border-primary/30 rounded-md px-3 py-2 w-full">
+                {info}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2 w-full mt-2">
+              <Button
+                variant="secondary"
+                onClick={handleResend}
+                disabled={actionLoading}
+              >
+                {actionLoading ? "Sending…" : "Resend email"}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setView("form");
+                  setMode("login");
+                  setSubmitError(null);
+                  setInfo(null);
+                }}
+              >
+                Back to sign in
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </AuthShell>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FORGOT PASSWORD VIEW
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (view === "forgot-password") {
+    return (
+      <AuthShell>
+        <Card>
+          <CardHeader className="pb-0">
+            <h2 className="text-lg font-bold text-foreground">Reset password</h2>
+            <p className="text-xs text-muted-foreground">
+              Enter your email and we&apos;ll send a reset link.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="fp-email">Email</Label>
+                <Input
+                  id="fp-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => validateField("email")}
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  aria-invalid={!!errors.email}
+                />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email}</p>
+                )}
+              </div>
+
+              {submitError && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
+                  {submitError}
+                </p>
+              )}
+
+              <Button type="submit" disabled={actionLoading}>
+                {actionLoading ? "Sending…" : "Send reset link"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setView("form");
+                  setSubmitError(null);
+                  setErrors({});
+                }}
+              >
+                Back to sign in
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </AuthShell>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RESET SENT VIEW
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (view === "reset-sent") {
+    return (
+      <AuthShell>
+        <Card>
+          <CardContent className="pt-6 flex flex-col items-center text-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-2xl">
+              ✉️
+            </div>
+            <h2 className="text-lg font-bold text-foreground">Reset link sent</h2>
+            <p className="text-sm text-muted-foreground">
+              Check <span className="font-medium text-foreground">{email}</span>{" "}
+              for a password-reset link. It expires in 1 hour.
+            </p>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setView("form");
+                setMode("login");
+              }}
+            >
+              Back to sign in
+            </Button>
+          </CardContent>
+        </Card>
+      </AuthShell>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MAIN FORM VIEW (login / register)
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+    <AuthShell>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-card border border-border mb-4">
@@ -76,7 +344,7 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                 <button
                   key={m}
                   type="button"
-                  onClick={() => setMode(m)}
+                  onClick={() => switchMode(m)}
                   className={cn(
                     "flex-1 py-1.5 rounded text-sm font-medium transition-colors",
                     mode === m
@@ -90,7 +358,7 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -98,10 +366,16 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => validateField("email")}
                   required
                   autoComplete="email"
                   placeholder="you@example.com"
+                  aria-invalid={!!errors.email}
+                  disabled={loading}
                 />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email}</p>
+                )}
               </div>
 
               {mode === "register" && (
@@ -112,29 +386,63 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Donte Caul"
+                    onBlur={() => validateField("name")}
+                    required
+                    placeholder="Jane Skydiver"
+                    aria-invalid={!!errors.name}
+                    disabled={loading}
                   />
+                  {errors.name && (
+                    <p className="text-xs text-destructive">{errors.name}</p>
+                  )}
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {mode === "login" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setView("forgot-password");
+                        setErrors({});
+                        setSubmitError(null);
+                      }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Forgot?
+                    </button>
+                  )}
+                </div>
                 <Input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() => validateField("password")}
                   required
                   autoComplete={
                     mode === "login" ? "current-password" : "new-password"
                   }
                   placeholder="••••••••"
+                  aria-invalid={!!errors.password}
+                  disabled={loading}
                 />
+                {errors.password ? (
+                  <p className="text-xs text-destructive">{errors.password}</p>
+                ) : (
+                  mode === "register" && (
+                    <p className="text-xs text-muted-foreground">
+                      At least 8 characters
+                    </p>
+                  )
+                )}
               </div>
 
-              {error && (
-                <p className="text-destructive-foreground text-sm bg-destructive/20 border border-destructive/30 rounded-md px-3 py-2">
-                  {error}
+              {submitError && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
+                  {submitError}
                 </p>
               )}
 
@@ -149,6 +457,15 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
           </CardContent>
         </Card>
       </div>
+    </AuthShell>
+  );
+}
+
+/** Shared centered layout for all auth views. */
+function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+      {children}
     </div>
   );
 }
