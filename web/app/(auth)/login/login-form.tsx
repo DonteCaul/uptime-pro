@@ -14,7 +14,7 @@ type Mode = "login" | "register";
 export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/jumps";
+  const redirect = searchParams.get("redirect") ?? "/";
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");

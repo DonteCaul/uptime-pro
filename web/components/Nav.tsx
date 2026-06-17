@@ -1,8 +1,15 @@
 import Link from "next/link";
-import { PlaneTakeoff, Upload, User, Users } from "lucide-react";
+import {
+  LayoutDashboard,
+  PlaneTakeoff,
+  Upload,
+  User,
+  Users,
+} from "lucide-react";
 import { SignOutButton } from "./SignOutButton";
 
 const links = [
+  { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/jumps", label: "Jumps", icon: PlaneTakeoff },
   { href: "/upload", label: "Upload", icon: Upload },
   { href: "/social", label: "Social", icon: Users },
@@ -17,7 +24,7 @@ export function Nav({ userEmail }: { userEmail: string | null }) {
   return (
     <>
       <header className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
-        <Link href="/jumps" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <span className="text-primary text-xl">⬡</span>
           <span className="font-bold text-foreground tracking-wide text-sm">
             UPTIME.PRO

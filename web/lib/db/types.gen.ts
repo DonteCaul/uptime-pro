@@ -467,6 +467,19 @@ export type Database = {
       }
       lat_bucket: { Args: { lat: number }; Returns: number }
       lon_bucket: { Args: { lon: number }; Returns: number }
+      user_stats: {
+        Args: never
+        Returns: {
+          fastest_ff_jump_id: number
+          fastest_freefall_ms: number
+          first_jump: string
+          highest_exit_jump_id: number
+          highest_exit_m: number
+          last_jump: string
+          total_freefall_s: number
+          total_jumps: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

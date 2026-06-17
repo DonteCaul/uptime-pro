@@ -225,6 +225,13 @@ Verification: before cutover, point one physical device at the new server and co
 - Decommission the old 3-service stack after a soak period.
 
 **Phase 5+ — Post-cutover roadmap (later, not in initial build)**
+- **Public marketing site** (`/`, `/about`, `/features`, `/privacy`, `/terms`): a proper landing
+  page with hero, feature highlights, screenshots, and a "Sign In" / "Get Started" CTA. The app
+  shell (`/jumps`, `/upload`, etc.) stays auth-gated behind a `/login` redirect. Currently `app/`
+  page.tsx redirects unauthed users straight to `/login` — replace with the landing page so the
+  root URL isn't a dead-end for visitors. Render these as static pages (no DB) for fast loads and
+  easy SEO/caching. Pages: home (hero + features + social proof), about, features (deep dive per
+  capability), privacy policy, terms of service. Consider a `/blog` or changelog later.
 - **Admin area** (`/admin/*`): a real role-gated UI on top of the existing `role` column
   on `profiles` (already `user | admin`). Manage users, toggle `DEKUNU_COMPAT` (move it
   from env to a DB-backed config row so admins can flip it at runtime), view device

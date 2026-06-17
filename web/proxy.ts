@@ -43,7 +43,11 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isProtected = pathname.startsWith("/jumps") ||
+  // Root path is the dashboard; everything else under the (app) group is
+  // also protected. The (auth) pages and /api/* + /v1/* manage their own access.
+  const isProtected =
+    pathname === "/" ||
+    pathname.startsWith("/jumps") ||
     pathname.startsWith("/upload") ||
     pathname.startsWith("/social") ||
     pathname.startsWith("/profile") ||
