@@ -65,6 +65,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
       - "traefik.http.routers.uptime-pro.rule=Host(`uptime.pro`)"
       - "traefik.http.routers.uptime-pro.entrypoints=https"
       - "traefik.http.routers.uptime-pro.tls=true"
