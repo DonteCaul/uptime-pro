@@ -5,6 +5,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+
+# Vite bakes this into the bundle at build time
+ARG VITE_MAPBOX_TOKEN
+ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
+
 RUN npm run build
 
 # ── Serve stage ───────────────────────────────────────────────

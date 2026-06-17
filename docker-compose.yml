@@ -45,6 +45,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
     restart: unless-stopped
     depends_on:
       backend:
