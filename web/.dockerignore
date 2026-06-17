@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.env*.local
+.env
+*.md
+coverage
+.DS_Store
+npm-debug.log*
+.DS_Store
+.vscode
+.idea
+supabase/.temp
+supabase/.branches
