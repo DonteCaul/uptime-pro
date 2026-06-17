@@ -1,0 +1,44 @@
+# Supabase local config (for `supabase start` / `supabase db reset`).
+# The hosted project is the source of truth for production; this config drives
+# local development only.
+
+project_id = "uptime-pro"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "app"]
+extra_search_path = ["public", "app"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_project_name = "uptime-pro-shadow"
+major_version = 16
+
+[db.pooler]
+enabled = true
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 15
+max_client_conn = 100
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 2592000   # 30 days, matching the old app
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = false
+enable_confirmations = false
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[realtime]
+enabled = false
