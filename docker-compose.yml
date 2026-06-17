@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-uptime}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_v2:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-uptime} -d ${POSTGRES_DB:-uptime}"]
       interval: 5s
@@ -69,5 +69,5 @@ networks:
     external: true
 
 volumes:
-  postgres_data:
+  postgres_data_v2:
   uploads_data:
