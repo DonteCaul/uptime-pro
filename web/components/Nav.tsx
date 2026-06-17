@@ -11,7 +11,7 @@ import {
 import { SignOutButton } from "./SignOutButton";
 
 const links = [
-  { href: "/", label: "Home", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/jumps", label: "Jumps", icon: PlaneTakeoff },
   { href: "/upload", label: "Upload", icon: Upload },
   { href: "/social", label: "Social", icon: Users },
@@ -34,7 +34,7 @@ export function Nav({ userEmail }: { userEmail: string | null }) {
       {/* Desktop header */}
       <header className="hidden sm:flex sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
         <div className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
+          <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
             <span className="text-primary text-xl">⬡</span>
             <span className="font-bold text-foreground tracking-wide text-sm">
               UPTIME.PRO
@@ -66,7 +66,7 @@ export function Nav({ userEmail }: { userEmail: string | null }) {
 
       {/* Mobile header (logo only — nav is at the bottom) */}
       <header className="sm:hidden sticky top-0 z-40 bg-card/90 backdrop-blur-sm border-b border-border px-4 h-12 flex items-center justify-center">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/dashboard" className="flex items-center gap-2">
           <span className="text-primary text-lg">⬡</span>
           <span className="font-bold text-foreground tracking-wide text-xs">
             UPTIME.PRO

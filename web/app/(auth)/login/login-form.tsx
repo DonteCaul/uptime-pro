@@ -25,7 +25,7 @@ type View = "form" | "verify-email" | "forgot-password" | "reset-sent";
 export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/";
+  const redirect = searchParams.get("redirect") ?? "/dashboard";
   const authError = searchParams.get("error");
 
   const [view, setView] = useState<View>("form");

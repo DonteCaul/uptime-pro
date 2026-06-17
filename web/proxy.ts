@@ -46,7 +46,7 @@ export async function proxy(request: NextRequest) {
   // Root path is the dashboard; everything else under the (app) group is
   // also protected. The (auth) pages and /api/* + /v1/* manage their own access.
   const isProtected =
-    pathname === "/" ||
+    pathname === "/dashboard" ||
     pathname.startsWith("/jumps") ||
     pathname.startsWith("/upload") ||
     pathname.startsWith("/social") ||
