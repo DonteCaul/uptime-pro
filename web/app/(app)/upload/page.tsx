@@ -13,7 +13,15 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { IngestResult } from "@/lib/dekunu/ingest";
 
-function ResultItem({ r }: { r: IngestResult }) {
+type Tab = "jumps" | "logs";
+
+interface LogResult {
+  file: string;
+  source: string;
+  log_number: number | null;
+}
+
+function JumpResultItem({ r }: { r: IngestResult }) {
   const isOk = r.status === "created";
   const isDup = r.status === "duplicate";
   const Icon = isOk ? CheckCircle : isDup ? MinusCircle : AlertCircle;
@@ -22,7 +30,6 @@ function ResultItem({ r }: { r: IngestResult }) {
     : isDup
       ? "text-yellow-500"
       : "text-destructive";
-
   return (
     <div className="flex items-start gap-2 py-2.5 border-b border-border last:border-0 text-sm">
       <Icon size={15} className={cn("shrink-0 mt-0.5", color)} />
@@ -43,46 +50,81 @@ function ResultItem({ r }: { r: IngestResult }) {
   );
 }
 
+function LogResultItem({ r }: { r: LogResult }) {
+  return (
+    <div className="flex items-start gap-2 py-2.5 border-b border-border last:border-0 text-sm">
+      <CheckCircle size={15} className="shrink-0 mt-0.5 text-primary" />
+      <div className="min-w-0">
+        <p className="text-foreground truncate">{r.file}</p>
+        <p className="text-xs text-muted-foreground">
+          {r.source}
+          {r.log_number != null ? ` #${r.log_number}` : ""}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function UploadPage() {
+  const [tab, setTab] = useState<Tab>("jumps");
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [results, setResults] = useState<IngestResult[] | null>(null);
+  const [jumpResults, setJumpResults] = useState<IngestResult[] | null>(null);
+  const [logResults, setLogResults] = useState<LogResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const ext = tab === "jumps" ? ".csv" : ".txt";
+
+  function switchTab(next: Tab) {
+    setTab(next);
+    setFiles([]);
+    setJumpResults(null);
+    setLogResults(null);
+    setError(null);
+  }
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
     const dropped = Array.from(e.dataTransfer.files).filter((f) =>
-      f.name.toLowerCase().endsWith(".csv"),
+      f.name.toLowerCase().endsWith(ext),
     );
     setFiles((prev) => [...prev, ...dropped]);
-    setResults(null);
+    setJumpResults(null);
+    setLogResults(null);
   }
 
   function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
-    setResults(null);
+    setJumpResults(null);
+    setLogResults(null);
   }
 
   async function handleUpload() {
     if (!files.length) return;
     setUploading(true);
-    setResults(null);
     setError(null);
+    setJumpResults(null);
+    setLogResults(null);
 
     try {
       const formData = new FormData();
       for (const file of files) {
         formData.append("files[]", file);
       }
-      const res = await fetch("/api/jumps/upload", { method: "POST", body: formData });
+      const endpoint =
+        tab === "jumps" ? "/api/jumps/upload" : "/api/logs/upload";
+      const res = await fetch(endpoint, { method: "POST", body: formData });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Upload failed");
+      if (!res.ok) throw new Error(data.error ?? "Upload failed");
+
+      if (tab === "jumps") {
+        setJumpResults(data.results ?? []);
+      } else {
+        setLogResults(data.results ?? []);
       }
-      setResults(data.results ?? []);
       setFiles([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -93,8 +135,27 @@ export default function UploadPage() {
 
   return (
     <div className="flex flex-col gap-5 pb-4">
-      <h2 className="text-xl font-bold text-foreground">Upload Jump Logs</h2>
+      <h2 className="text-xl font-bold text-foreground">Upload</h2>
 
+      {/* Tab toggle */}
+      <div className="flex bg-muted rounded-md p-1 gap-1">
+        {(["jumps", "logs"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => switchTab(t)}
+            className={cn(
+              "flex-1 py-1.5 rounded text-sm font-medium transition-colors",
+              tab === t
+                ? "bg-card text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t === "jumps" ? "Jump Logs" : "System Logs"}
+          </button>
+        ))}
+      </div>
+
+      {/* Drop zone */}
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -112,21 +173,24 @@ export default function UploadPage() {
       >
         <UploadIcon size={28} className="mx-auto mb-3 text-muted-foreground" />
         <p className="text-foreground font-medium text-sm">
-          Drop CSV files here
+          Drop {tab === "jumps" ? "CSV" : "TXT"} files here
         </p>
         <p className="text-xs text-muted-foreground mt-1">
-          or tap to browse · Dekunu action_*.csv format
+          {tab === "jumps"
+            ? "Dekunu action_*.csv format"
+            : "syslog.N.txt or syslog_esp32.N.txt"}
         </p>
         <input
           ref={inputRef}
           type="file"
-          accept=".csv"
+          accept={ext}
           multiple
           className="hidden"
           onChange={onPick}
         />
       </div>
 
+      {/* Selected files */}
       {files.length > 0 && (
         <Card>
           <CardContent className="pt-3 pb-1 px-4">
@@ -173,15 +237,31 @@ export default function UploadPage() {
         </Card>
       )}
 
-      {results && (
+      {/* Jump results */}
+      {jumpResults && (
         <Card>
           <CardContent className="pt-3 pb-1 px-4">
             <p className="text-xs text-muted-foreground pb-2">
-              {results.filter((r) => r.status === "created").length} new ·{" "}
-              {results.filter((r) => r.status === "duplicate").length} duplicate
+              {jumpResults.filter((r) => r.status === "created").length} new ·{" "}
+              {jumpResults.filter((r) => r.status === "duplicate").length}{" "}
+              duplicate
             </p>
-            {results.map((r, i) => (
-              <ResultItem key={i} r={r} />
+            {jumpResults.map((r, i) => (
+              <JumpResultItem key={i} r={r} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Log results */}
+      {logResults && (
+        <Card>
+          <CardContent className="pt-3 pb-1 px-4">
+            <p className="text-xs text-muted-foreground pb-2">
+              {logResults.length} uploaded
+            </p>
+            {logResults.map((r, i) => (
+              <LogResultItem key={i} r={r} />
             ))}
           </CardContent>
         </Card>

@@ -5,6 +5,8 @@ import {
   Upload,
   User,
   Users,
+  ScrollText,
+  Cpu,
 } from "lucide-react";
 import { SignOutButton } from "./SignOutButton";
 
@@ -13,6 +15,8 @@ const links = [
   { href: "/jumps", label: "Jumps", icon: PlaneTakeoff },
   { href: "/upload", label: "Upload", icon: Upload },
   { href: "/social", label: "Social", icon: Users },
+  { href: "/logs", label: "Logs", icon: ScrollText },
+  { href: "/devices", label: "Devices", icon: Cpu },
   { href: "/profile", label: "Profile", icon: User },
 ] as const;
 

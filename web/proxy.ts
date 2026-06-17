@@ -50,6 +50,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/jumps") ||
     pathname.startsWith("/upload") ||
     pathname.startsWith("/social") ||
+    pathname.startsWith("/logs") ||
+    pathname.startsWith("/devices") ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/settings");
   const isAuthPage = pathname === "/login" || pathname === "/register";
