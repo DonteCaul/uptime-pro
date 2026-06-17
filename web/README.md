@@ -64,15 +64,21 @@ Then replace the placeholder export in `lib/db/types.ts` with the generated type
 - Row-Level Security scopes every read — see `supabase/migrations/0002`.
 - The Dekunu device layer (`/v1/*`) uses its own separate JWT scheme.
 
-## Project status (Phase 0 complete)
+## Project status (Phase 1 complete)
 
 - [x] App scaffolded, Tailwind 4 theme tokens + theme-flash script ported
 - [x] Supabase browser/server/admin clients + session-guarding `proxy.ts`
-- [x] Drizzle schema + Postgres migrations 0001–0004 (schema, RLS, legacy auth import, Storage)
+- [x] Drizzle schema + Postgres migrations 0001–0005 (schema, RLS, legacy auth import, Storage, stats function)
 - [x] shadcn UI primitives ported to TypeScript
 - [x] Login/register + auth callback + sign-out action
 - [x] ESLint / Prettier / Vitest wired with a passing units test suite
-- [ ] Phase 1 — Dashboard, Jumps, JumpDetail, Profile views
-- [ ] Phase 2 — CSV upload + writes
+- [x] **Phase 1 — Core read views**
+  - Dashboard (stats via Postgres function + recent jumps)
+  - Jumps list: All (server-paginated) / By-Dropzone (cached geocoding) / Map (Mapbox cluster)
+  - JumpDetail: 3D satellite replay + 4-channel telemetry scrubber + RAF playback + analysis + weather + notes/delete
+  - Profile (read view with gear, credentials, devices, reserve countdown)
+  - 3 cached server-side API proxies (/api/places, /api/geocode, /api/weather) — keys never reach the browser
+- [ ] Phase 2 — CSV upload + writes (profile editing, avatar)
 - [ ] Phase 3 — Dekunu compat layer + Social
 - [ ] Phase 4 — Data migration & cutover
+- [ ] Phase 5+ — Public marketing site, admin area, social auth
