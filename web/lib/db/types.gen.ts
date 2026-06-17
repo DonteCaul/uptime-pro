@@ -466,6 +466,7 @@ export type Database = {
         }[]
       }
       lat_bucket: { Args: { lat: number }; Returns: number }
+      leaderboard: { Args: { period?: string }; Returns: Json }
       lon_bucket: { Args: { lon: number }; Returns: number }
       user_stats: {
         Args: never

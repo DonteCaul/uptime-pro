@@ -1,24 +1,69 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createServerClient } from "@/lib/supabase/server";
+import { SocialClient } from "./SocialClient";
 
 export const metadata = { title: "Social · UpTime.Pro" };
 
-export const revalidate = 60; // ISR — leaderboard cache, 60s
+// ISR — leaderboard recomputed at most once per 60s. The Postgres function
+// does the heavy aggregation server-side, so this keeps the four queries off
+// the hot path without serving stale-all-day data.
+export const revalidate = 60;
 
-export default function SocialPage() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-bold text-foreground">Social</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle>Leaderboard</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Public leaderboards and home-DZ globe land in Phase 3, with ISR
-            caching to avoid recomputing the four aggregations per request.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+interface LeaderUser {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+}
+
+interface JumpLeader extends LeaderUser {
+  jump_count: number;
+}
+
+interface DzLeader extends LeaderUser {
+  dz_count: number;
+}
+
+interface DiscLeader extends LeaderUser {
+  discipline: string;
+  jump_count: number;
+}
+
+interface HomeDz extends LeaderUser {
+  home_dz: string | null;
+  home_dz_lat: string | null;
+  home_dz_lon: string | null;
+}
+
+export interface LeaderboardData {
+  jumps: JumpLeader[];
+  dzs: DzLeader[];
+  disciplines: DiscLeader[];
+  homeDzs: HomeDz[];
+}
+
+// Pre-fetch all four periods at build/revalidate time so the client can
+// switch instantly without a round-trip per tab change.
+async function fetchAllPeriods(): Promise<Record<string, LeaderboardData>> {
+  const supabase = await createServerClient();
+  const periods = ["day", "month", "year", "all"];
+  const entries = await Promise.all(
+    periods.map(async (period) => {
+      const { data, error } = await supabase.rpc("leaderboard", { period });
+      if (error) {
+        console.warn(`[social] leaderboard(${period}) failed: ${error.message}`);
+        return [period, { jumps: [], dzs: [], disciplines: [], homeDzs: [] }] as const;
+      }
+      return [period, (data ?? {
+        jumps: [],
+        dzs: [],
+        disciplines: [],
+        homeDzs: [],
+      }) as unknown as LeaderboardData] as const;
+    }),
   );
+  return Object.fromEntries(entries);
+}
+
+export default async function SocialPage() {
+  const dataByPeriod = await fetchAllPeriods();
+  return <SocialClient dataByPeriod={dataByPeriod} />;
 }
