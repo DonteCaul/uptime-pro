@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .dark .shadow-sm {
+    box-shadow: 0 1px 4px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+  }
+}
+
+/* Switch colors — outside layers to win over Tailwind utilities */
+.uptime-switch[data-state="unchecked"] {
+  background-color: hsl(215 12% 52%);
+}
+.dark .uptime-switch[data-state="unchecked"] {
+  background-color: hsl(222 20% 35%);
+}
+.uptime-switch[data-state="checked"] {
+  background-color: hsl(var(--primary));
+}
+
+@layer base {
+  /* Light mode (default) */
+  :root {
+    --background: 210 25% 95%;
+    --foreground: 224 60% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 60% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 60% 8%;
+
+    --primary: 161 80% 32%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 18% 84%;
+    --secondary-foreground: 224 60% 8%;
+
+    --muted: 210 18% 86%;
+    --muted-foreground: 215 20% 34%;
+
+    --accent: 210 18% 82%;
+    --accent-foreground: 224 60% 8%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 22% 70%;
+    --input: 214 18% 90%;
+    --ring: 161 80% 32%;
+
+    --radius: 0.75rem;
+  }
+
+  /* Dark mode */
+  .dark {
+    --background: 224 35% 7%;
+    --foreground: 213 25% 90%;
+
+    --card: 222 32% 13%;
+    --card-foreground: 213 25% 90%;
+
+    --popover: 222 32% 13%;
+    --popover-foreground: 213 25% 90%;
+
+    --primary: 161 90% 48%;
+    --primary-foreground: 224 35% 7%;
+
+    --secondary: 222 28% 20%;
+    --secondary-foreground: 213 25% 90%;
+
+    --muted: 223 28% 17%;
+    --muted-foreground: 215 16% 58%;
+
+    --accent: 223 28% 20%;
+    --accent-foreground: 213 25% 90%;
+
+    --destructive: 0 63% 38%;
+    --destructive-foreground: 213 25% 90%;
+
+    --border: 222 25% 24%;
+    --input: 222 32% 11%;
+    --ring: 161 90% 48%;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    min-height: 100vh;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  input, textarea, select {
+    background-color: hsl(var(--input));
+    color: hsl(var(--foreground));
+  }
+
+}
