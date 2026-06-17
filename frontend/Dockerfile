@@ -10,6 +10,8 @@ COPY . .
 # ARG before COPY busts cache when token changes
 ARG VITE_MAPBOX_TOKEN
 ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 
 # Cache bust — forces npm run build to re-run on every deploy
 ARG CACHEBUST=1

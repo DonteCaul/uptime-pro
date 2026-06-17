@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import { ChevronLeft, ChevronRight, Play, Pause, RotateCcw, Layers, SkipBack, SkipForward } from 'lucide-react';
 import { api } from '../api';
 import { useUnits } from '../App';
@@ -12,8 +10,6 @@ import { cn } from '../lib/utils';
 import TelemetryChart from '../components/TelemetryChart';
 import WeatherCard from '../components/WeatherCard';
 import { fetchWeather } from '../lib/weather';
-
-mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
 // DeviceMode: 2=climb, 3=freefall, 4=canopy, 5=ground
 const PHASE_COLOR = { 2: '#00cc55', 3: '#ff3333', 4: '#3399ff', 5: '#888888' };
@@ -108,136 +104,155 @@ export default function JumpDetail() {
       .catch(() => setWxLoading(false));
   }, [jump?.exit_lat, jump?.exit_lon, jump?.jumped_at]);
 
-  // Build Mapbox once track is ready
+  // Build Mapbox once track is ready — lazy-load mapbox-gl to avoid bundling it eagerly
   useEffect(() => {
     if (!track.length || !mapContainerRef.current || mapRef.current) return;
     const valid = track.filter(p => p.gps_lat && p.gps_lon && Math.abs(p.gps_lat) > 1);
     if (!valid.length) return;
 
-    const features = [];
-    for (let i = 1; i < valid.length; i++) {
-      const a = valid[i - 1], b = valid[i];
-      features.push({
-        type: 'Feature',
-        properties: { color: PHASE_COLOR[getPhase(a)] ?? '#888' },
-        geometry: { type: 'LineString', coordinates: [[a.gps_lon, a.gps_lat], [b.gps_lon, b.gps_lat]] },
-      });
-    }
+    let destroyed = false;
 
-    const bounds = valid.reduce(
-      (b, p) => b.extend([p.gps_lon, p.gps_lat]),
-      new mapboxgl.LngLatBounds([valid[0].gps_lon, valid[0].gps_lat], [valid[0].gps_lon, valid[0].gps_lat])
-    );
+    (async () => {
+      const [{ default: mapboxgl }] = await Promise.all([
+        import('mapbox-gl'),
+        import('mapbox-gl/dist/mapbox-gl.css'),
+      ]);
 
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      bounds,
-      fitBoundsOptions: { padding: 40 },
-      attributionControl: false,
-    });
-    mapRef.current = map;
+      if (destroyed || !mapContainerRef.current) return;
 
-    map.on('load', () => {
-      map.addSource('mapbox-dem', {
-        type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
-        tileSize: 512, maxzoom: 14,
-      });
+      mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
-      map.addSource('track', { type: 'geojson', data: { type: 'FeatureCollection', features } });
-      map.addLayer({
-        id: 'track-line', type: 'line', source: 'track',
-        paint: { 'line-color': ['get', 'color'], 'line-width': 3, 'line-opacity': 0.9 },
-      });
-
-      // ── Jump run heading indicator (dashed white line + arrowhead) ───────
-      try {
-        const climbPts = valid.filter(p => p.device_mode === 2);
-        if (climbPts.length >= 2) {
-          const tail   = climbPts.slice(-20);
-          const exitPt = tail[tail.length - 1];
-          const refPt  = tail[0];
-
-          const lat1 = +refPt.gps_lat,  lon1 = +refPt.gps_lon;
-          const lat2 = +exitPt.gps_lat, lon2 = +exitPt.gps_lon;
-
-          if (!isNaN(lat1) && !isNaN(lon1) && !isNaN(lat2) && !isNaN(lon2)) {
-            const dLon = (lon2 - lon1) * Math.cos(lat2 * Math.PI / 180);
-            const dLat = lat2 - lat1;
-            const bearingDeg = ((Math.atan2(dLon, dLat) * 180 / Math.PI) + 360) % 360;
-
-            const RAD = Math.PI / 180;
-            const len = 0.036; // ~2.5 miles forward
-            const endLat = lat2 + len * Math.cos(bearingDeg * RAD);
-            const endLon = lon2 + len * Math.sin(bearingDeg * RAD);
-
-            map.addSource('jump-run', {
-              type: 'geojson',
-              data: {
-                type: 'Feature',
-                geometry: { type: 'LineString', coordinates: [[lon2, lat2], [endLon, endLat]] },
-              },
-            });
-            map.addLayer({
-              id: 'jump-run-line', type: 'line', source: 'jump-run',
-              paint: {
-                'line-color': '#facc15',
-                'line-width': 2.5,
-                'line-opacity': 0.95,
-              },
-            });
-
-            // ▼ triangle (border-top) — tip points DOWN by default (180°).
-            // Rotate by (bearingDeg - 180) so the tip points in bearingDeg direction.
-            // anchor:'top' puts the base of ▼ at [endLon,endLat]; tip extends outward along bearing.
-            const arrowEl = document.createElement('div');
-            arrowEl.style.cssText = [
-              'width:0;height:0',
-              'border-left:7px solid transparent',
-              'border-right:7px solid transparent',
-              'border-top:16px solid #facc15',
-              'filter:drop-shadow(0 0 3px rgba(0,0,0,0.7))',
-              `transform:rotate(${bearingDeg - 180}deg)`,
-              'transform-origin:center top',
-            ].join(';');
-            new mapboxgl.Marker({ element: arrowEl, anchor: 'top' })
-              .setLngLat([endLon, endLat])
-              .addTo(map);
-
-            const dot = document.createElement('div');
-            dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid rgba(0,0,0,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6)';
-            new mapboxgl.Marker({ element: dot, anchor: 'center' })
-              .setLngLat([lon2, lat2])
-              .addTo(map);
-
-            setJumpRunBearing(Math.round(bearingDeg));
-          }
-        }
-      } catch (err) {
-        console.error('Jump run indicator error:', err);
-      }
-
-      try {
-        map.addLayer({
-          id: 'sky', type: 'sky',
-          paint: { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0, 90], 'sky-atmosphere-sun-intensity': 15 },
+      const features = [];
+      for (let i = 1; i < valid.length; i++) {
+        const a = valid[i - 1], b = valid[i];
+        features.push({
+          type: 'Feature',
+          properties: { color: PHASE_COLOR[getPhase(a)] ?? '#888' },
+          geometry: { type: 'LineString', coordinates: [[a.gps_lon, a.gps_lat], [b.gps_lon, b.gps_lat]] },
         });
-      } catch (err) {
-        console.warn('Sky layer not supported:', err.message);
       }
 
-      new mapboxgl.Marker({ color: '#00cc55' }).setLngLat([valid[0].gps_lon, valid[0].gps_lat]).addTo(map);
-      new mapboxgl.Marker({ color: '#3399ff' }).setLngLat([valid[valid.length-1].gps_lon, valid[valid.length-1].gps_lat]).addTo(map);
+      const bounds = valid.reduce(
+        (b, p) => b.extend([p.gps_lon, p.gps_lat]),
+        new mapboxgl.LngLatBounds([valid[0].gps_lon, valid[0].gps_lat], [valid[0].gps_lon, valid[0].gps_lat])
+      );
 
-      const el = document.createElement('div');
-      el.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#FFDD00;border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.7)';
-      markerRef.current = new mapboxgl.Marker({ element: el })
-        .setLngLat([valid[0].gps_lon, valid[0].gps_lat]).addTo(map);
+      const map = new mapboxgl.Map({
+        container: mapContainerRef.current,
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        bounds,
+        fitBoundsOptions: { padding: 40 },
+        attributionControl: false,
+      });
+      mapRef.current = map;
 
-      setMapReady(true);
-    });
+      map.on('load', () => {
+        if (destroyed) { map.remove(); return; }
 
-    return () => { map.remove(); mapRef.current = null; markerRef.current = null; };
+        map.addSource('mapbox-dem', {
+          type: 'raster-dem', url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+          tileSize: 512, maxzoom: 14,
+        });
+
+        map.addSource('track', { type: 'geojson', data: { type: 'FeatureCollection', features } });
+        map.addLayer({
+          id: 'track-line', type: 'line', source: 'track',
+          paint: { 'line-color': ['get', 'color'], 'line-width': 3, 'line-opacity': 0.9 },
+        });
+
+        // ── Jump run heading indicator (dashed white line + arrowhead) ───────
+        try {
+          const climbPts = valid.filter(p => p.device_mode === 2);
+          if (climbPts.length >= 2) {
+            const tail   = climbPts.slice(-20);
+            const exitPt = tail[tail.length - 1];
+            const refPt  = tail[0];
+
+            const lat1 = +refPt.gps_lat,  lon1 = +refPt.gps_lon;
+            const lat2 = +exitPt.gps_lat, lon2 = +exitPt.gps_lon;
+
+            if (!isNaN(lat1) && !isNaN(lon1) && !isNaN(lat2) && !isNaN(lon2)) {
+              const dLon = (lon2 - lon1) * Math.cos(lat2 * Math.PI / 180);
+              const dLat = lat2 - lat1;
+              const bearingDeg = ((Math.atan2(dLon, dLat) * 180 / Math.PI) + 360) % 360;
+
+              const RAD = Math.PI / 180;
+              const len = 0.036; // ~2.5 miles forward
+              const endLat = lat2 + len * Math.cos(bearingDeg * RAD);
+              const endLon = lon2 + len * Math.sin(bearingDeg * RAD);
+
+              map.addSource('jump-run', {
+                type: 'geojson',
+                data: {
+                  type: 'Feature',
+                  geometry: { type: 'LineString', coordinates: [[lon2, lat2], [endLon, endLat]] },
+                },
+              });
+              map.addLayer({
+                id: 'jump-run-line', type: 'line', source: 'jump-run',
+                paint: {
+                  'line-color': '#facc15',
+                  'line-width': 2.5,
+                  'line-opacity': 0.95,
+                },
+              });
+
+              // ▼ triangle (border-top) — tip points DOWN by default (180°).
+              // Rotate by (bearingDeg - 180) so the tip points in bearingDeg direction.
+              // anchor:'top' puts the base of ▼ at [endLon,endLat]; tip extends outward along bearing.
+              const arrowEl = document.createElement('div');
+              arrowEl.style.cssText = [
+                'width:0;height:0',
+                'border-left:7px solid transparent',
+                'border-right:7px solid transparent',
+                'border-top:16px solid #facc15',
+                'filter:drop-shadow(0 0 3px rgba(0,0,0,0.7))',
+                `transform:rotate(${bearingDeg - 180}deg)`,
+                'transform-origin:center top',
+              ].join(';');
+              new mapboxgl.Marker({ element: arrowEl, anchor: 'top' })
+                .setLngLat([endLon, endLat])
+                .addTo(map);
+
+              const dot = document.createElement('div');
+              dot.style.cssText = 'width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid rgba(0,0,0,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6)';
+              new mapboxgl.Marker({ element: dot, anchor: 'center' })
+                .setLngLat([lon2, lat2])
+                .addTo(map);
+
+              setJumpRunBearing(Math.round(bearingDeg));
+            }
+          }
+        } catch (err) {
+          console.error('Jump run indicator error:', err);
+        }
+
+        try {
+          map.addLayer({
+            id: 'sky', type: 'sky',
+            paint: { 'sky-type': 'atmosphere', 'sky-atmosphere-sun': [0, 90], 'sky-atmosphere-sun-intensity': 15 },
+          });
+        } catch (err) {
+          console.warn('Sky layer not supported:', err.message);
+        }
+
+        new mapboxgl.Marker({ color: '#00cc55' }).setLngLat([valid[0].gps_lon, valid[0].gps_lat]).addTo(map);
+        new mapboxgl.Marker({ color: '#3399ff' }).setLngLat([valid[valid.length-1].gps_lon, valid[valid.length-1].gps_lat]).addTo(map);
+
+        const el = document.createElement('div');
+        el.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#FFDD00;border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.7)';
+        markerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([valid[0].gps_lon, valid[0].gps_lat]).addTo(map);
+
+        setMapReady(true);
+      });
+    })();
+
+    return () => {
+      destroyed = true;
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+      markerRef.current = null;
+    };
   }, [track]);
 
   // 3D terrain toggle

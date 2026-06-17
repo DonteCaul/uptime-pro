@@ -4,13 +4,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: dekunu
-      POSTGRES_USER: dekunu
+      POSTGRES_DB: ${POSTGRES_DB:-uptime}
+      POSTGRES_USER: ${POSTGRES_USER:-uptime}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dekunu -d dekunu"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-uptime} -d ${POSTGRES_DB:-uptime}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -26,8 +26,8 @@ services:
         condition: service_healthy
     environment:
       PORT: 3000
-      DATABASE_URL: postgresql://dekunu:${POSTGRES_PASSWORD:-changeme}@postgres:5432/dekunu
-      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-long-random-string}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-uptime}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-uptime}
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
       UPLOAD_DIR: /app/uploads
       GOOGLE_PLACES_KEY: ${GOOGLE_PLACES_KEY:-}
       DEKUNU_COMPAT: ${DEKUNU_COMPAT:-false}
@@ -47,7 +47,8 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
+        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN:-}
+        VITE_API_URL: ${VITE_API_URL:-}
     restart: unless-stopped
     depends_on:
       backend:
@@ -55,22 +56,13 @@ services:
     expose:
       - "80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:80 || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
       - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontend-http.entrypoints=http"
-      - "traefik.http.routers.frontend-http.rule=Host(`uptime.pro`)"
-      - "traefik.http.routers.frontend-http.middlewares=redirect-to-https"
-      - "traefik.http.routers.frontend-https.entrypoints=https"
-      - "traefik.http.routers.frontend-https.rule=Host(`uptime.pro`)"
-      - "traefik.http.routers.frontend-https.tls=true"
-      - "traefik.http.routers.frontend-https.tls.certresolver=letsencrypt"
-      - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
 networks:
   coolify:

@@ -33,6 +33,8 @@ export const api = {
   jumps: (limit = 20, offset = 0) =>
     request('GET', `/jumps?limit=${limit}&offset=${offset}`),
 
+  dropzones: () => request('GET', '/jumps/dropzones'),
+
   jump: (id) => request('GET', `/jumps/${id}`),
   jumpTrack: (id) => request('GET', `/jumps/${id}/track`),
   updateJump: (id, body) => request('PATCH', `/jumps/${id}`, body),

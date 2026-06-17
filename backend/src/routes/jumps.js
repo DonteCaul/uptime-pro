@@ -145,14 +145,75 @@ router.get('/', requireAuth, async (req, res) => {
       `SELECT id, filename, jumped_at, exit_altitude_m, deployment_altitude_m,
               freefall_duration_s, max_freefall_speed_ms, canopy_duration_s,
               exit_lat, exit_lon, landing_lat, landing_lon, dz_lat, dz_lon, action_type_id,
-              discipline_id, jump_number, notes, row_count, created_at
+              discipline_id, jump_number, notes, row_count, created_at,
+              COUNT(*) OVER() AS total_count
        FROM jumps WHERE user_id = $1
        ORDER BY jumped_at DESC NULLS LAST, created_at DESC
        LIMIT $2 OFFSET $3`,
       [req.user.id, limit, offset]
     );
-    const total = await db.query('SELECT COUNT(*) FROM jumps WHERE user_id = $1', [req.user.id]);
-    res.json({ total: parseInt(total.rows[0].count), limit, offset, jumps: rows });
+    const total = rows.length > 0 ? parseInt(rows[0].total_count) : 0;
+    const jumps = rows.map(({ total_count, ...rest }) => rest);
+    res.set('Cache-Control', 'private, max-age=30');
+    res.json({ total, limit, offset, jumps });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// GET /jumps/dropzones — cluster jumps by exit location (5km radius)
+router.get('/dropzones', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, exit_lat, exit_lon, jumped_at, jump_number,
+              exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, discipline_id
+       FROM jumps
+       WHERE user_id = $1 AND exit_lat IS NOT NULL AND exit_lon IS NOT NULL
+       ORDER BY jumped_at DESC`,
+      [req.user.id]
+    );
+
+    const clusters = [];
+    for (const jump of rows) {
+      const lat = parseFloat(jump.exit_lat);
+      const lon = parseFloat(jump.exit_lon);
+      let assigned = false;
+      for (const cluster of clusters) {
+        if (haversineKm(lat, lon, cluster.center_lat, cluster.center_lon) <= 5) {
+          cluster.jumps.push(jump);
+          cluster.jump_count++;
+          // Recalculate centroid
+          cluster.center_lat = (cluster.center_lat * (cluster.jump_count - 1) + lat) / cluster.jump_count;
+          cluster.center_lon = (cluster.center_lon * (cluster.jump_count - 1) + lon) / cluster.jump_count;
+          if (!cluster.most_recent_at || jump.jumped_at > cluster.most_recent_at) {
+            cluster.most_recent_at = jump.jumped_at;
+          }
+          assigned = true;
+          break;
+        }
+      }
+      if (!assigned) {
+        clusters.push({
+          center_lat: lat,
+          center_lon: lon,
+          jump_count: 1,
+          jumps: [jump],
+          most_recent_at: jump.jumped_at,
+        });
+      }
+    }
+
+    res.set('Cache-Control', 'private, max-age=120');
+    res.json(clusters);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
@@ -172,6 +233,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     );
     const row = rows.find(r => String(r.id) === String(req.params.id));
     if (!row) return res.status(404).json({ error: 'Jump not found' });
+    res.set('Cache-Control', 'private, max-age=300');
     res.json(row);
   } catch (err) {
     console.error(err);

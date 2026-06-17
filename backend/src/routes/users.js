@@ -122,19 +122,52 @@ router.post('/me/avatar', requireAuth, uploadAvatar.single('avatar'), async (req
 router.get('/me/stats', requireAuth, async (req, res) => {
   try {
     const { rows } = await db.query(
-      `SELECT
-         COUNT(*)                                       AS total_jumps,
-         COUNT(*) FILTER (WHERE jumped_at IS NOT NULL) AS jumps_with_data,
-         MAX(exit_altitude_m)             FILTER (WHERE discipline_id IS DISTINCT FROM 'Rode the plane down') AS highest_exit_m,
-         MAX(max_freefall_speed_ms)       FILTER (WHERE discipline_id IS DISTINCT FROM 'Rode the plane down') AS fastest_freefall_ms,
-         SUM(freefall_duration_s)         FILTER (WHERE discipline_id IS DISTINCT FROM 'Rode the plane down') AS total_freefall_s,
-         MIN(jumped_at)                                AS first_jump_at,
-         MAX(jumped_at)                                AS last_jump_at,
-         (SELECT id FROM jumps WHERE user_id = $1 AND discipline_id IS DISTINCT FROM 'Rode the plane down' ORDER BY exit_altitude_m DESC NULLS LAST LIMIT 1)       AS highest_exit_jump_id,
-         (SELECT id FROM jumps WHERE user_id = $1 AND discipline_id IS DISTINCT FROM 'Rode the plane down' ORDER BY max_freefall_speed_ms DESC NULLS LAST LIMIT 1) AS fastest_freefall_jump_id
-       FROM jumps WHERE user_id = $1`,
+      `WITH base AS (
+         SELECT
+           id,
+           jumped_at,
+           exit_altitude_m,
+           max_freefall_speed_ms,
+           freefall_duration_s,
+           discipline_id
+         FROM jumps
+         WHERE user_id = $1
+       ),
+       agg AS (
+         SELECT
+           COUNT(*)                                                                        AS total_jumps,
+           COUNT(*) FILTER (WHERE jumped_at IS NOT NULL)                                  AS jumps_with_data,
+           MAX(exit_altitude_m)       FILTER (WHERE discipline_id IS DISTINCT FROM 'Rode the plane down') AS highest_exit_m,
+           MAX(max_freefall_speed_ms) FILTER (WHERE discipline_id IS DISTINCT FROM 'Rode the plane down') AS fastest_freefall_ms,
+           SUM(freefall_duration_s)   FILTER (WHERE discipline_id IS DISTINCT FROM 'Rode the plane down') AS total_freefall_s,
+           MIN(jumped_at)                                                                 AS first_jump_at,
+           MAX(jumped_at)                                                                 AS last_jump_at
+         FROM base
+       ),
+       highest_exit AS (
+         SELECT id
+         FROM base
+         WHERE discipline_id IS DISTINCT FROM 'Rode the plane down'
+         ORDER BY exit_altitude_m DESC NULLS LAST
+         LIMIT 1
+       ),
+       fastest_freefall AS (
+         SELECT id
+         FROM base
+         WHERE discipline_id IS DISTINCT FROM 'Rode the plane down'
+         ORDER BY max_freefall_speed_ms DESC NULLS LAST
+         LIMIT 1
+       )
+       SELECT
+         agg.*,
+         highest_exit.id   AS highest_exit_jump_id,
+         fastest_freefall.id AS fastest_freefall_jump_id
+       FROM agg
+       LEFT JOIN highest_exit   ON true
+       LEFT JOIN fastest_freefall ON true`,
       [req.user.id]
     );
+    res.set('Cache-Control', 'private, max-age=60');
     res.json(rows[0]);
   } catch (err) {
     console.error(err);

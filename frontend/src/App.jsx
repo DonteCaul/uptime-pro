@@ -1,14 +1,27 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Jumps from './pages/Jumps';
-import JumpDetail from './pages/JumpDetail';
-import Upload from './pages/Upload';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import Social from './pages/Social';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Nav from './components/Nav';
+
+const Login     = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Jumps     = lazy(() => import('./pages/Jumps'));
+const JumpDetail = lazy(() => import('./pages/JumpDetail'));
+const Upload    = lazy(() => import('./pages/Upload'));
+const Profile   = lazy(() => import('./pages/Profile'));
+const Settings  = lazy(() => import('./pages/Settings'));
+const Social    = lazy(() => import('./pages/Social'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export const AuthContext = createContext(null);
 export const UnitsContext = createContext('metric');
@@ -76,32 +89,42 @@ export default function App() {
     setUser(null);
   }
 
+  const suspenseFallback = (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400" />
+    </div>
+  );
+
   return (
+    <QueryClientProvider client={queryClient}>
     <AuthContext.Provider value={{ token, user, login, logout }}>
     <UnitsContext.Provider value={{ units, setUnits: setAndSaveUnits }}>
     <ThemeContext.Provider value={{ theme, setTheme }}>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            element={
-              <RequireAuth>
-                <AppLayout />
-              </RequireAuth>
-            }
-          >
-            <Route path="/"          element={<Dashboard />} />
-            <Route path="/jumps"     element={<Jumps />} />
-            <Route path="/jumps/:id" element={<JumpDetail />} />
-            <Route path="/upload"    element={<Upload />} />
-            <Route path="/social"    element={<Social />} />
-            <Route path="/profile"   element={<Profile />} />
-            <Route path="/settings"  element={<Settings />} />
-          </Route>
-        </Routes>
+        <Suspense fallback={suspenseFallback}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              element={
+                <RequireAuth>
+                  <AppLayout />
+                </RequireAuth>
+              }
+            >
+              <Route path="/"          element={<Dashboard />} />
+              <Route path="/jumps"     element={<Jumps />} />
+              <Route path="/jumps/:id" element={<JumpDetail />} />
+              <Route path="/upload"    element={<Upload />} />
+              <Route path="/social"    element={<Social />} />
+              <Route path="/profile"   element={<Profile />} />
+              <Route path="/settings"  element={<Settings />} />
+            </Route>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ThemeContext.Provider>
     </UnitsContext.Provider>
     </AuthContext.Provider>
+    </QueryClientProvider>
   );
 }

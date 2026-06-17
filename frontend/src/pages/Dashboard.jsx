@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { useAuth, useUnits } from '../App';
 import { Card, CardContent } from '../components/ui/card';
@@ -18,17 +19,19 @@ function fmtDuration(seconds) {
 export default function Dashboard() {
   const { user } = useAuth();
   const { units } = useUnits();
-  const [stats, setStats] = useState(null);
-  const [recentJumps, setRecentJumps] = useState([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([api.stats(), api.jumps(5, 0)]).then(([s, j]) => {
-      setStats(s);
-      setRecentJumps(j.jumps || []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['stats'],
+    queryFn: api.stats,
+  });
+
+  const { data: recentData, isLoading: jumpsLoading } = useQuery({
+    queryKey: ['jumps', 5, 0],
+    queryFn: () => api.jumps(5, 0),
+  });
+
+  const recentJumps = recentData?.jumps || [];
+  const loading = statsLoading || jumpsLoading;
 
   if (loading) return <div className="text-center text-muted-foreground py-20">Loading…</div>;
 

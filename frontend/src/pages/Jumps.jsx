@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, ChevronDown, ChevronUp, MapPin, Pencil, Check, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../api';
 import { useUnits, useTheme } from '../App';
 import { Card, CardContent } from '../components/ui/card';
@@ -134,23 +135,20 @@ function JumpRow({ jump, index, units, className }) {
 
 // ── All Jumps tab ─────────────────────────────────────────────────────────────
 function AllJumps({ units }) {
-  const [jumps, setJumps] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const limit = 20;
+  const offset = (page - 1) * limit;
 
-  const load = useCallback((off) => {
-    setLoading(true);
-    api.jumps(limit, off)
-      .then((res) => { setJumps(res.jumps || []); setTotal(res.total || 0); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['jumps', limit, offset],
+    queryFn: () => api.jumps(limit, offset),
+    placeholderData: (prev) => prev,
+  });
 
-  useEffect(() => { load(offset); }, [offset, load]);
+  const jumps = data?.jumps || [];
+  const total = data?.total || 0;
 
-  if (loading) return <div className="text-center text-muted-foreground py-10">Loading…</div>;
+  if (isLoading) return <div className="text-center text-muted-foreground py-10">Loading…</div>;
   if (!jumps.length) return (
     <div className="text-center text-muted-foreground py-10">
       No jumps yet.{' '}
@@ -172,14 +170,14 @@ function AllJumps({ units }) {
       {total > limit && (
         <div className="flex justify-between items-center pt-2">
           <Button variant="secondary" size="sm"
-            onClick={() => setOffset(Math.max(0, offset - limit))} disabled={offset === 0}>
+            onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
             ← Prev
           </Button>
           <span className="text-xs text-muted-foreground">
             {offset + 1}–{Math.min(offset + limit, total)} of {total}
           </span>
           <Button variant="secondary" size="sm"
-            onClick={() => setOffset(offset + limit)} disabled={offset + limit >= total}>
+            onClick={() => setPage(p => p + 1)} disabled={offset + limit >= total}>
             Next →
           </Button>
         </div>
@@ -189,7 +187,13 @@ function AllJumps({ units }) {
 }
 
 // ── Dropzone card ─────────────────────────────────────────────────────────────
-const dzKey = (c) => c.lat ? `dz:${c.lat.toFixed(3)},${c.lon.toFixed(3)}` : 'dz:nogps';
+// cluster shape from server: { center_lat, center_lon, jump_count, jump_ids, most_recent_at, name }
+// cluster shape from client fallback: { lat, lon, jumps: [...], name }
+const dzKey = (c) => {
+  const lat = c.center_lat ?? c.lat;
+  const lon = c.center_lon ?? c.lon;
+  return lat ? `dz:${parseFloat(lat).toFixed(3)},${parseFloat(lon).toFixed(3)}` : 'dz:nogps';
+};
 
 function DropzoneCard({ cluster, units }) {
   const [open, setOpen] = useState(false);
@@ -197,7 +201,13 @@ function DropzoneCard({ cluster, units }) {
   const [customName, setCustomName] = useState(() => localStorage.getItem(dzKey(cluster)) || '');
   const inputRef = useRef(null);
 
-  const displayName = customName || cluster.name || `${cluster.lat?.toFixed(2)}°, ${cluster.lon?.toFixed(2)}°`;
+  // Support both server shape (center_lat/center_lon/jump_count) and client fallback shape (lat/lon/jumps)
+  const lat = cluster.center_lat ?? cluster.lat;
+  const lon = cluster.center_lon ?? cluster.lon;
+  const jumpCount = cluster.jump_count ?? cluster.jumps?.length ?? 0;
+  const jumpList  = cluster.jumps || [];
+
+  const displayName = customName || cluster.name || (lat ? `${parseFloat(lat).toFixed(2)}°, ${parseFloat(lon).toFixed(2)}°` : 'No GPS Data');
 
   function startEdit(e) {
     e.stopPropagation();
@@ -223,7 +233,7 @@ function DropzoneCard({ cluster, units }) {
     <Card className="group">
       <div className="flex items-center justify-between px-4 py-3">
         <button className="flex items-center gap-3 min-w-0 flex-1 text-left" onClick={() => !editing && setOpen((o) => !o)}>
-          <MapPin size={15} className={cn('shrink-0', cluster.lat ? 'text-primary' : 'text-muted-foreground')} />
+          <MapPin size={15} className={cn('shrink-0', lat ? 'text-primary' : 'text-muted-foreground')} />
           <div className="min-w-0 flex-1">
             {editing ? (
               <input
@@ -237,7 +247,7 @@ function DropzoneCard({ cluster, units }) {
               <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
             )}
             <p className="text-xs text-muted-foreground mt-0.5">
-              {cluster.jumps.length} jump{cluster.jumps.length !== 1 ? 's' : ''}
+              {jumpCount} jump{jumpCount !== 1 ? 's' : ''}
             </p>
           </div>
         </button>
@@ -257,9 +267,9 @@ function DropzoneCard({ cluster, units }) {
           )}
         </div>
       </div>
-      {open && (
+      {open && jumpList.length > 0 && (
         <CardContent className="p-0 border-t border-border">
-          {cluster.jumps.map((j) => (
+          {jumpList.map((j) => (
             <JumpRow key={j.id} jump={j} units={units} />
           ))}
         </CardContent>
@@ -269,43 +279,56 @@ function DropzoneCard({ cluster, units }) {
 }
 
 // ── By Dropzone tab ───────────────────────────────────────────────────────────
-function ByDropzone({ jumps, units }) {
-  const [clusters, setClusters] = useState(() => clusterJumps(jumps));
+// Accepts server-side clusters: { center_lat, center_lon, jump_count, jump_ids, most_recent_at }
+// Runs Google Places name lookup per cluster (same as before), falls back to reverseGeocode.
+function ByDropzone({ serverClusters, units }) {
+  const [clusters, setClusters] = useState(serverClusters);
   const [geocoding, setGeocoding] = useState(true);
 
   useEffect(() => {
-    const cs = clusterJumps(jumps);
-    setClusters(cs);
+    if (!serverClusters?.length) { setGeocoding(false); return; }
+    setClusters(serverClusters);
     let cancelled = false;
 
-    fetchDropzonesInBbox(cs).then(async (dzList) => {
+    // Build the shape fetchDropzonesInBbox expects: [{ lat, lon }]
+    const clusterProxies = serverClusters.map(c => ({
+      lat: c.center_lat ?? c.lat,
+      lon: c.center_lon ?? c.lon,
+    }));
+
+    fetchDropzonesInBbox(clusterProxies).then(async (dzList) => {
       if (cancelled) return;
       const radiusKm10 = 19.312;
       const names = await Promise.all(
-        cs.map((c) => {
-          if (!c.lat) return Promise.resolve('No GPS Data');
-          // Find nearest DZ within 10 miles
+        serverClusters.map((c) => {
+          const lat = c.center_lat ?? c.lat;
+          const lon = c.center_lon ?? c.lon;
+          if (!lat) return Promise.resolve('No GPS Data');
           let best = null;
           for (const dz of dzList) {
-            const dist = haversineKm(c.lat, c.lon, dz.lat, dz.lon);
+            const dist = haversineKm(lat, lon, dz.lat, dz.lon);
             if (dist <= radiusKm10 && (!best || dist < best.dist)) best = { name: dz.name, dist };
           }
           if (best) return Promise.resolve(best.name);
-          return reverseGeocode(c.lat, c.lon);
+          return reverseGeocode(lat, lon);
         })
       );
       if (cancelled) return;
-      setClusters(cs.map((c, i) => ({
-        ...c,
-        name: names[i] || (c.lat ? `${c.lat.toFixed(2)}°, ${c.lon.toFixed(2)}°` : 'No GPS Data'),
-      })));
+      setClusters(serverClusters.map((c, i) => {
+        const lat = c.center_lat ?? c.lat;
+        const lon = c.center_lon ?? c.lon;
+        return {
+          ...c,
+          name: names[i] || (lat ? `${parseFloat(lat).toFixed(2)}°, ${parseFloat(lon).toFixed(2)}°` : 'No GPS Data'),
+        };
+      }));
       setGeocoding(false);
     });
 
     return () => { cancelled = true; };
-  }, [jumps]);
+  }, [serverClusters]);
 
-  if (!clusters.length) {
+  if (!clusters?.length) {
     return <div className="text-center text-muted-foreground py-10">No jumps found.</div>;
   }
 
@@ -326,23 +349,29 @@ export default function Jumps() {
   const { units } = useUnits();
   const { theme } = useTheme();
   const [tab, setTab] = useState('all');
-  const [total, setTotal] = useState(null);
-  const [allJumps, setAllJumps] = useState(null);
-  const [loadingAll, setLoadingAll] = useState(false);
 
-  useEffect(() => {
-    api.jumps(1, 0).then((r) => setTotal(r.total || 0)).catch(() => {});
-  }, []);
+  // Total jump count (used in header) — fetch just 1 record for the total field
+  const { data: countData } = useQuery({
+    queryKey: ['jumps', 1, 0],
+    queryFn: () => api.jumps(1, 0),
+  });
+  const total = countData?.total ?? null;
 
-  useEffect(() => {
-    if (tab !== 'all' && allJumps === null && !loadingAll) {
-      setLoadingAll(true);
-      api.jumps(1000, 0)
-        .then((r) => setAllJumps(r.jumps || []))
-        .catch(() => setAllJumps([]))
-        .finally(() => setLoadingAll(false));
-    }
-  }, [tab, allJumps, loadingAll]);
+  // Dropzones — server-side clusters, only fetched when tab is active
+  const { data: dzData, isLoading: dzLoading } = useQuery({
+    queryKey: ['dropzones'],
+    queryFn: api.dropzones,
+    staleTime: 5 * 60_000,
+    enabled: tab === 'dropzones' || tab === 'dropzone',
+  });
+
+  // All jumps for map tab — still fetch a large set client-side
+  const { data: allData, isLoading: allLoading } = useQuery({
+    queryKey: ['jumps', 1000, 0],
+    queryFn: () => api.jumps(1000, 0),
+    enabled: tab === 'map',
+  });
+  const allJumps = allData?.jumps || [];
 
   const tabs = [
     { id: 'all', label: 'All Jumps' },
@@ -379,20 +408,20 @@ export default function Jumps() {
       {tab === 'all' && <AllJumps units={units} />}
 
       {tab === 'dropzone' && (
-        loadingAll
+        dzLoading
           ? <div className="text-center text-muted-foreground py-10">Loading…</div>
-          : <ByDropzone jumps={allJumps || []} units={units} />
+          : <ByDropzone serverClusters={dzData || []} units={units} />
       )}
 
       {tab === 'map' && (
-        loadingAll
+        allLoading
           ? <div className="text-center text-muted-foreground py-10">Loading…</div>
           : (
             <div
               className="-mx-4 -mb-4 overflow-hidden"
               style={{ height: 'calc(100vh - 176px)' }}
             >
-              <JumpMap jumps={allJumps || []} theme={theme} />
+              <JumpMap jumps={allJumps} theme={theme} />
             </div>
           )
       )}
