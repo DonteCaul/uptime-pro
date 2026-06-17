@@ -51,8 +51,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      - VIRTUAL_HOST=${DOMAIN:-localhost}
+    ports:
+      - "80:80"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:80 || exit 1"]
       interval: 10s
