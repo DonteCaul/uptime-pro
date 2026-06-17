@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { alt, speed, type UnitSystem } from "@/lib/units";
 import { fmtDuration } from "@/lib/format";
+import { encodeJumpId } from "@/lib/slug";
 import { JumpsTabsClient } from "./JumpsTabsClient";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ function JumpRowItem({
 }) {
   return (
     <Link
-      href={`/jumps/${jump.id}`}
+      href={`/jumps/${encodeJumpId(jump.id)}`}
       className={cn(
         "flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors border-b border-border last:border-0",
         className,

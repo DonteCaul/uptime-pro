@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { encodeJumpId } from "@/lib/slug";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -218,7 +219,7 @@ export default function JumpMap({ jumps, theme }: JumpMapProps) {
               .getElementById(uid)
               ?.addEventListener("click", () => {
                 popup.remove();
-                routerRef.current.push(`/jumps/${id}`);
+                routerRef.current.push(`/jumps/${encodeJumpId(id)}`);
               });
           }, 0);
         });

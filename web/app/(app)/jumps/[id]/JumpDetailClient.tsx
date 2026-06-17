@@ -22,6 +22,7 @@ import { WeatherCard } from "@/components/WeatherCard";
 import { alt, speed, gpsSpeed, type UnitSystem } from "@/lib/units";
 import { fmtDuration } from "@/lib/format";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { encodeJumpId } from "@/lib/slug";
 
 // DeviceMode: 2=climb, 3=freefall, 4=canopy, 5=ground
 const PHASE_COLOR: Record<number, string> = {
@@ -599,7 +600,7 @@ export function JumpDetailClient({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={() => jump.prev_id && router.push(`/jumps/${jump.prev_id}`)}
+            onClick={() => jump.prev_id && router.push(`/jumps/${encodeJumpId(jump.prev_id)}`)}
             disabled={!jump.prev_id}
             className="p-1.5 rounded hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Previous jump"
@@ -607,7 +608,7 @@ export function JumpDetailClient({
             <ChevronLeft size={16} className="text-foreground" />
           </button>
           <button
-            onClick={() => jump.next_id && router.push(`/jumps/${jump.next_id}`)}
+            onClick={() => jump.next_id && router.push(`/jumps/${encodeJumpId(jump.next_id)}`)}
             disabled={!jump.next_id}
             className="p-1.5 rounded hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             title="Next jump"

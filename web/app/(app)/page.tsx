@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/StatCard";
 import { alt, speed, type UnitSystem } from "@/lib/units";
 import { fmtDuration } from "@/lib/format";
+import { encodeJumpId } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
             <Link
               href={
                 stats?.highest_exit_jump_id
-                  ? `/jumps/${stats.highest_exit_jump_id}`
+                  ? `/jumps/${encodeJumpId(stats.highest_exit_jump_id)}`
                   : "#"
               }
               aria-disabled={!stats?.highest_exit_jump_id}
@@ -100,7 +101,7 @@ export default async function DashboardPage() {
             <Link
               href={
                 stats?.fastest_ff_jump_id
-                  ? `/jumps/${stats.fastest_ff_jump_id}`
+                  ? `/jumps/${encodeJumpId(stats.fastest_ff_jump_id)}`
                   : "#"
               }
               aria-disabled={!stats?.fastest_ff_jump_id}
@@ -138,7 +139,7 @@ export default async function DashboardPage() {
                   {recentJumps.map((j) => (
                     <Link
                       key={j.id}
-                      href={`/jumps/${j.id}`}
+                      href={`/jumps/${encodeJumpId(j.id)}`}
                       className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors border-b border-border last:border-0 first:rounded-t-lg last:rounded-b-lg"
                     >
                       <div>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { alt, speed, type UnitSystem } from "@/lib/units";
 import { fmtDuration } from "@/lib/format";
+import { encodeJumpId } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -259,9 +260,10 @@ export default async function PublicProfilePage({
             </CardHeader>
             <CardContent className="p-0">
               {recentJumps.map((j) => (
-                <div
+                <Link
                   key={j.id}
-                  className="flex items-center justify-between px-4 py-3 border-b border-border last:border-0"
+                  href={`/jumps/${encodeJumpId(j.id)}`}
+                  className="flex items-center justify-between px-4 py-3 border-b border-border last:border-0 hover:bg-accent/50 transition-colors"
                 >
                   <div>
                     <p className="text-sm font-medium text-foreground">
@@ -291,7 +293,7 @@ export default async function PublicProfilePage({
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </CardContent>
           </Card>

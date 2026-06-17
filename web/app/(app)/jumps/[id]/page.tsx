@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
+import { decodeJumpSlug } from "@/lib/slug";
 import { JumpDetailClient } from "./JumpDetailClient";
 import type { UnitSystem } from "@/lib/units";
 import type { WeatherSummary } from "@/lib/weather";
@@ -80,8 +81,10 @@ export default async function JumpDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: idStr } = await params;
-  const id = parseInt(idStr);
-  if (Number.isNaN(id)) notFound();
+  // Decode the opaque slug → numeric id. Falls back to plain-int for backward
+  // compat with any old shared links.
+  const id = decodeJumpSlug(idStr) ?? (/^\d+$/.test(idStr) ? parseInt(idStr, 10) : null);
+  if (id == null || Number.isNaN(id)) notFound();
 
   const supabase = await createServerClient();
 

@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { alt, speed, type UnitSystem } from "@/lib/units";
 import { fmtDuration } from "@/lib/format";
+import { encodeJumpId } from "@/lib/slug";
 import dynamic from "next/dynamic";
 
 // Mapbox touches window — load client-only, no SSR.
@@ -140,7 +141,7 @@ function JumpRowItem({
 }) {
   return (
     <Link
-      href={`/jumps/${jump.id}`}
+      href={`/jumps/${encodeJumpId(jump.id)}`}
       className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors border-b border-border last:border-0"
     >
       <div className="flex items-center gap-3 min-w-0">
