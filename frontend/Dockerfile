@@ -7,9 +7,12 @@ RUN npm ci
 COPY . .
 
 # Vite bakes this into the bundle at build time
+# ARG before COPY busts cache when token changes
 ARG VITE_MAPBOX_TOKEN
 ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
 
+# Cache bust — forces npm run build to re-run on every deploy
+ARG CACHEBUST=1
 RUN npm run build && ls -la /app/dist
 
 # ── Serve stage ───────────────────────────────────────────────
