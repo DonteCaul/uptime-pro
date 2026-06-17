@@ -14,10 +14,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - app
 
   backend:
     build:
-      context: ./dekunu-backend
+      context: ./backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -31,18 +33,35 @@ services:
       DEKUNU_COMPAT: ${DEKUNU_COMPAT:-false}
     volumes:
       - uploads_data:/app/uploads
-    # Run migrations then start the server
-    command: >
-      sh -c "node src/db/migrate.js && node src/app.js"
+    command: sh -c "node src/db/migrate.js && node src/app.js"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app
 
   frontend:
     build:
-      context: ./dekunu-frontend
+      context: ./frontend
     restart: unless-stopped
     depends_on:
-      - backend
-    ports:
-      - "${PORT:-80}:80"
+      backend:
+        condition: service_healthy
+    environment:
+      - VIRTUAL_HOST=${DOMAIN:-localhost}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
 
 volumes:
   postgres_data:
