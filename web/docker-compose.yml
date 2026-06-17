@@ -1,0 +1,29 @@
+# Coolify-compatible docker-compose for the Next.js app.
+#
+# IMPORTANT: do NOT declare `networks:` or Traefik `labels:` here. Coolify's
+# docker-compose flow injects both automatically — it attaches the service to
+# its proxy network and adds Traefik labels when you set a domain in the
+# resource's Settings → Domains. Declaring them manually conflicts with that.
+#
+# Set the env vars below in the Coolify resource's Environment tab. The
+# NEXT_PUBLIC_* build args are baked into the client bundle at build time.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Public vars (safe to bake in — they're public by design).
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY}
+        NEXT_PUBLIC_MAPBOX_TOKEN: ${NEXT_PUBLIC_MAPBOX_TOKEN}
+    restart: unless-stopped
+    environment:
+      # Runtime-only secrets (never baked into the bundle).
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+      DATABASE_URL: ${DATABASE_URL}
+      GOOGLE_PLACES_KEY: ${GOOGLE_PLACES_KEY}
+      DEKUNU_COMPAT: ${DEKUNU_COMPAT:-false}
+      DEKUNU_JWT_SECRET: ${DEKUNU_JWT_SECRET}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
