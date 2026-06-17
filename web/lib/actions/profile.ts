@@ -7,6 +7,24 @@ import type { Database } from "@/lib/db/types";
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 /**
+ * Revalidate every route that reads the user's units/theme preference.
+ * Called after any preference change so all pages reflect the new setting
+ * immediately (server components cache the preference at render time).
+ */
+function revalidateAllPrefRoutes() {
+  revalidatePath("/dashboard");
+  revalidatePath("/jumps");
+  revalidatePath("/jumps", "page");
+  revalidatePath("/jumps/[id]", "page");
+  revalidatePath("/devices");
+  revalidatePath("/devices/[deviceId]", "page");
+  revalidatePath("/social");
+  revalidatePath("/profile");
+  revalidatePath("/settings");
+  revalidatePath("/u/[id]", "page");
+}
+
+/**
  * Update the signed-in user's profile. Only the provided fields are written
  * (undefined fields are skipped), matching the original PATCH /users/me shape.
  *
@@ -27,10 +45,8 @@ export async function updateProfile(values: ProfileUpdate) {
 
   if (error) throw new Error(error.message);
 
-  // Refresh cached reads (dashboard, jumps, profile).
-  revalidatePath("/");
-  revalidatePath("/jumps");
-  revalidatePath("/profile");
+  // Refresh cached reads across all pref-aware routes.
+  revalidateAllPrefRoutes();
 
   return { ok: true };
 }
@@ -61,10 +77,7 @@ export async function updatePreferences(values: {
     .eq("id", user.id);
   if (error) throw new Error(error.message);
 
-  revalidatePath("/");
-  revalidatePath("/jumps");
-  revalidatePath("/profile");
-  revalidatePath("/settings");
+  revalidateAllPrefRoutes();
 
   return { ok: true };
 }
