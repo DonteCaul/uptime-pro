@@ -63,6 +63,17 @@ services:
       start_period: 10s
     networks:
       - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime-pro.rule=Host(`uptime.pro`)"
+      - "traefik.http.routers.uptime-pro.entrypoints=https"
+      - "traefik.http.routers.uptime-pro.tls=true"
+      - "traefik.http.routers.uptime-pro.tls.certresolver=letsencrypt"
+      - "traefik.http.services.uptime-pro.loadbalancer.server.port=80"
+      - "traefik.http.routers.uptime-pro-http.rule=Host(`uptime.pro`)"
+      - "traefik.http.routers.uptime-pro-http.entrypoints=http"
+      - "traefik.http.routers.uptime-pro-http.middlewares=uptime-pro-https"
+      - "traefik.http.middlewares.uptime-pro-https.redirectscheme.scheme=https"
 
 networks:
   coolify:
