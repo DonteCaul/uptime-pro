@@ -1,18 +1,18 @@
 -- UpTime.Pro initial schema
 --
--- All app tables live in a dedicated `app` schema to keep them separate from
--- Supabase's own tables (auth.*, storage.*, realtime.*).
+-- All application tables live in the default `public` schema. This matches the
+-- Supabase convention so unqualified `.from("jumps")` queries work via the
+-- PostgREST API with no extra dashboard config. (Supabase's own auth/storage/
+-- realtime tables live in their own separate schemas, so there is no collision.)
 --
 -- Tenancy note: authorization is enforced by Row-Level Security in
 -- 0002_rls_policies.sql. user-scoped tables carry a user_id column
 -- referencing auth.users.id (a uuid).
 
-create schema if not exists app;
-
 -- ─── Profiles ──────────────────────────────────────────────────────────────
 -- 1:1 with auth.users. Created by the handle_new_user trigger below on signup.
--- Includes the 14 profile columns missing from the original schema.sql.
-create table if not exists app.profiles (
+-- Includes the 14 profile columns missing from the original legacy schema.sql.
+create table if not exists public.profiles (
   id                     uuid primary key references auth.users(id) on delete cascade,
   uptime_user_id         integer unique,                  -- Dekunu device user id (e.g. 469)
   email                  text unique,
@@ -41,13 +41,13 @@ create table if not exists app.profiles (
 );
 
 -- Auto-create a profile row when a new auth.users row appears.
-create or replace function app.handle_new_user()
+create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = auth, public
 as $$
 begin
-  insert into app.profiles (id, email, full_name)
+  insert into public.profiles (id, email, full_name)
   values (new.id, new.email, coalesce(new.raw_user_meta_data->>'full_name', ''))
   on conflict (id) do nothing;
   return new;
@@ -57,20 +57,20 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute function app.handle_new_user();
+  for each row execute function public.handle_new_user();
 
 -- Keep updated_at current on profile edits.
-create or replace function app.touch_updated_at()
+create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin new.updated_at := now(); return new; end; $$;
 
-drop trigger if exists profiles_touch_updated_at on app.profiles;
+drop trigger if exists profiles_touch_updated_at on public.profiles;
 create trigger profiles_touch_updated_at
-  before update on app.profiles
-  for each row execute function app.touch_updated_at();
+  before update on public.profiles
+  for each row execute function public.touch_updated_at();
 
 -- ─── Devices ───────────────────────────────────────────────────────────────
-create table if not exists app.devices (
+create table if not exists public.devices (
   id                  serial primary key,
   device_id           integer unique not null,        -- Dekunu device id
   device_type         text,
@@ -87,10 +87,10 @@ create table if not exists app.devices (
 -- values like "Belly / RW", "BASE", and the sentinel "Rode the plane down".
 -- `raw_file_storage_key` replaces the old absolute raw_file_path; points into
 -- the Supabase Storage `jump-csv` bucket.
-create table if not exists app.jumps (
+create table if not exists public.jumps (
   id                       serial primary key,
   user_id                  uuid not null references auth.users(id) on delete cascade,
-  device_id                integer references app.devices(id) on delete set null,
+  device_id                integer references public.devices(id) on delete set null,
   jump_number              integer,
   filename                 text not null,
   jumped_at                timestamptz,
@@ -113,15 +113,15 @@ create table if not exists app.jumps (
   created_at               timestamptz not null default now()
 );
 
-create index if not exists idx_jumps_user_id     on app.jumps(user_id);
-create index if not exists idx_jumps_jumped_at   on app.jumps(jumped_at);
-create index if not exists idx_jumps_user_file   on app.jumps(user_id, filename);
+create index if not exists idx_jumps_user_id     on public.jumps(user_id);
+create index if not exists idx_jumps_jumped_at   on public.jumps(jumped_at);
+create index if not exists idx_jumps_user_file   on public.jumps(user_id, filename);
 
 -- ─── Jump data points (time-series; the hot table) ─────────────────────────
 -- Bulk-inserted in batches of 200. 26 numeric sensor columns per row.
-create table if not exists app.jump_data_points (
+create table if not exists public.jump_data_points (
   id                          bigserial primary key,
-  jump_id                     integer not null references app.jumps(id) on delete cascade,
+  jump_id                     integer not null references public.jumps(id) on delete cascade,
   sample_ms                   bigint,
   device_mode                 smallint,
   gps_time                    bigint,
@@ -150,12 +150,12 @@ create table if not exists app.jump_data_points (
   altitude_m_baro2            numeric
 );
 
-create index if not exists idx_jump_data_points_jump_id on app.jump_data_points(jump_id);
+create index if not exists idx_jump_data_points_jump_id on public.jump_data_points(jump_id);
 
 -- ─── System logs ───────────────────────────────────────────────────────────
-create table if not exists app.system_logs (
+create table if not exists public.system_logs (
   id           bigserial primary key,
-  device_id    integer references app.devices(id) on delete set null,
+  device_id    integer references public.devices(id) on delete set null,
   user_id      uuid references auth.users(id) on delete set null,
   log_source   text,                  -- 'syslog' | 'syslog_esp32'
   log_number   integer,
@@ -163,10 +163,10 @@ create table if not exists app.system_logs (
   uploaded_at  timestamptz not null default now()
 );
 
-create index if not exists idx_system_logs_user_id on app.system_logs(user_id);
+create index if not exists idx_system_logs_user_id on public.system_logs(user_id);
 
 -- ─── Server-side caches (written by route handlers via service role) ───────
-create table if not exists app.places_cache (
+create table if not exists public.places_cache (
   id             bigserial primary key,
   lat_bucket     integer not null,    -- round(lat * 1000)
   lon_bucket     integer not null,    -- round(lon * 1000)
@@ -176,14 +176,14 @@ create table if not exists app.places_cache (
   unique (lat_bucket, lon_bucket, query)
 );
 
-create table if not exists app.geocode_cache (
+create table if not exists public.geocode_cache (
   id             bigserial primary key,
   key            text not null unique,
   response_json  text not null,
   fetched_at     timestamptz not null default now()
 );
 
-create table if not exists app.weather_cache (
+create table if not exists public.weather_cache (
   id             bigserial primary key,
   key            text not null unique,  -- "lat,lon,YYYY-MM-DD"
   response_json  text not null,

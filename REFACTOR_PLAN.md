@@ -224,6 +224,24 @@ Verification: before cutover, point one physical device at the new server and co
 - Repoint DNS / Traefik to the new single-service deploy.
 - Decommission the old 3-service stack after a soak period.
 
+**Phase 5+ — Post-cutover roadmap (later, not in initial build)**
+- **Admin area** (`/admin/*`): a real role-gated UI on top of the existing `role` column
+  on `profiles` (already `user | admin`). Manage users, toggle `DEKUNU_COMPAT` (move it
+  from env to a DB-backed config row so admins can flip it at runtime), view device
+  inventory, bulk reprocess/re-parse CSVs, inspect system logs, cache management
+  (flush places/geocode/weather), and a basic health/dashboard. Guarded by `proxy.ts`
+  + a server-side `requireAdmin()` check + an RLS policy that limits `admin` reads to
+  the `admin` role.
+- **Social auth** (Google, Apple, GitHub, etc.): enable OAuth providers in Supabase
+  dashboard and surface "Continue with …" buttons on the login/register pages. The
+  `@supabase/ssr` callback route already handles the OAuth redirect. Link accounts to
+  existing email identities via Supabase's identity-linking flow.
+- **Rate limiting** (`@upstash/ratelimit` or middleware-based) on `/api/places/*`,
+  `/v1/getSecurityToken2`, and auth endpoints.
+- **Realtime** (Supabase Realtime) for live leaderboard updates and multi-device sync
+  notifications — currently disabled in `config.toml`, can flip on when needed.
+
+
 ---
 
 ## Best-practice additions during the rewrite

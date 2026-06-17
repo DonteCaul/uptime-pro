@@ -9,12 +9,12 @@
 -- them as email-confirmed. The standard Supabase sign-in flow will then
 -- verify the password against the bcrypt hash automatically.
 --
--- Run this AFTER the pg_dump import has populated a staging table
--- (app._legacy_users) with (uptime_user_id, email, password_hash, full_name).
+-- Run this AFTER the pg_dump import has populated the staging table
+-- (public._legacy_users) with (uptime_user_id, email, password_hash, full_name).
 -- Then run the import function below.
 
 -- Staging table for the dump.
-create table if not exists app._legacy_users (
+create table if not exists public._legacy_users (
   uptime_user_id  integer primary key,
   email           text,
   password_hash   text,        -- bcrypt, $2a$... / $2b$...
@@ -24,10 +24,10 @@ create table if not exists app._legacy_users (
 
 -- Import function: for each legacy user, create an auth.users row + profile.
 -- Idempotent — safe to re-run. Skips users whose email already exists.
-create or replace function app.import_legacy_users()
+create or replace function public.import_legacy_users()
 returns table (imported bigint, skipped bigint, errored bigint)
 language plpgsql
-security definer set search_path = auth, public, app
+security definer set search_path = auth, public
 as $$
 declare
   v_imported bigint := 0;
@@ -36,11 +36,11 @@ declare
   rec        record;
   v_uid      uuid;
 begin
-  for rec in select * from app._legacy_users loop
+  for rec in select * from public._legacy_users loop
     begin
       -- Skip if a profile already exists for this email or uptime_user_id.
       if exists (
-        select 1 from app.profiles p
+        select 1 from public.profiles p
         where p.email = rec.email or p.uptime_user_id = rec.uptime_user_id
       ) then
         v_skipped := v_skipped + 1;
@@ -88,7 +88,7 @@ begin
 
       -- Backfill the profile row. The on_auth_user_created trigger also fires,
       -- but our ON CONFLICT (id) DO NOTHING keeps this insert authoritative.
-      insert into app.profiles (id, email, full_name, uptime_user_id)
+      insert into public.profiles (id, email, full_name, uptime_user_id)
       values (v_uid, rec.email, coalesce(rec.full_name, ''), rec.uptime_user_id)
       on conflict (id) do update
         set uptime_user_id = excluded.uptime_user_id,
@@ -107,5 +107,5 @@ $$;
 
 -- NOTE: this is a migration-time helper. After the cutover import succeeds,
 -- you may drop the staging table and revoke the function:
---   drop table app._legacy_users;
---   drop function app.import_legacy_users();
+--   drop table public._legacy_users;
+--   drop function public.import_legacy_users();

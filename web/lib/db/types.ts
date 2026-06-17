@@ -1,12 +1,10 @@
 /**
  * Strongly-typed Supabase database schema.
  *
- * For now we re-export the untyped default so the Supabase clients compile
- * during Phase 0. Once the first migration (supabase/migrations/0001) is
- * applied against the Supabase project, generate the real type with:
+ * Re-exports the generated type (lib/db/types.gen.ts), produced by:
  *
- *   supabase gen types --lang=typescript --project-id <ref> > lib/db/types.gen.ts
+ *   supabase gen types --linked --lang typescript --schema app > lib/db/types.gen.ts
  *
- * and replace the export below with `export type Database = GeneratedDatabase;`.
+ * Re-run that command after any migration changes the `app` schema.
  */
-export type Database = Record<string, never>;
+export type Database = import("./types.gen").Database;

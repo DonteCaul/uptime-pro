@@ -1,5 +1,5 @@
 import {
-  pgSchema,
+  pgTable,
   text,
   integer,
   bigint,
@@ -16,8 +16,12 @@ import {
 /**
  * Drizzle schema for UpTime.Pro.
  *
- * All app tables live in a dedicated `app` schema to keep them separate from
- * Supabase's own tables (auth.*, storage.*, realtime.*) in the shared Postgres.
+ * All tables live in the default `public` schema. This matches the Supabase
+ * convention and means unqualified `.from("profiles")` queries work via the
+ * PostgREST API without extra config — no need to expose a custom schema in
+ * the dashboard. (Supabase's own auth/storage/realtime tables live in their
+ * own separate schemas, so there's no collision.)
+ *
  * The Supabase `Database` type referenced by the Supabase clients is generated
  * from the applied migrations — see lib/db/types.ts.
  *
@@ -26,13 +30,11 @@ import {
  * Every user-scoped table below carries a `userId` column that RLS filters on.
  */
 
-export const app = pgSchema("app");
-
 // ─── Profiles ──────────────────────────────────────────────────────────────
 // 1:1 with auth.users. Created by trigger on signup (0001_initial_schema.sql).
 // Includes the 14 profile columns missing from the original schema.sql.
 
-export const profiles = app.table("profiles", {
+export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(), // == auth.users.id
   uptimeUserId: integer("uptime_user_id").unique(), // Dekunu device user ID
   email: text("email").unique(),
@@ -64,12 +66,16 @@ export const profiles = app.table("profiles", {
   theme: text("theme").default("light").notNull(), // 'light' | 'dark'
   role: text("role").default("user").notNull(), // 'user' | 'admin'
 
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // ─── Devices ───────────────────────────────────────────────────────────────
-export const devices = app.table("devices", {
+export const devices = pgTable("devices", {
   id: serial("id").primaryKey(),
   deviceId: integer("device_id").unique().notNull(), // Dekunu device id
   deviceType: text("device_type"),
@@ -79,7 +85,9 @@ export const devices = app.table("devices", {
   // Supabase auth uid — text to match auth.users.id type
   currentUserId: text("current_user_id"),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // ─── Jumps ─────────────────────────────────────────────────────────────────
@@ -89,7 +97,7 @@ export const devices = app.table("devices", {
 // `rawFileStorageKey` replaces the old absolute `raw_file_path` now that files
 // live in Supabase Storage.
 
-export const jumps = app.table("jumps", {
+export const jumps = pgTable("jumps", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(), // auth.users.id
   deviceId: integer("device_id"),
@@ -115,14 +123,16 @@ export const jumps = app.table("jumps", {
   notes: text("notes"),
   rawFileStorageKey: text("raw_file_storage_key"),
   rowCount: integer("row_count"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // ─── Jump data points (time-series, the hot table) ─────────────────────────
 // Bulk-inserted in batches of 200. 26 numeric sensor columns per row, indexed
 // on jump_id, ON DELETE CASCADE so deleting a jump purges its points.
 
-export const jumpDataPoints = app.table("jump_data_points", {
+export const jumpDataPoints = pgTable("jump_data_points", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   jumpId: integer("jump_id")
     .notNull()
@@ -156,38 +166,50 @@ export const jumpDataPoints = app.table("jump_data_points", {
 });
 
 // ─── System logs (device syslog uploads) ───────────────────────────────────
-export const systemLogs = app.table("system_logs", {
+export const systemLogs = pgTable("system_logs", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   deviceId: integer("device_id"),
   userId: text("user_id"),
   logSource: text("log_source"), // 'syslog' | 'syslog_esp32'
   logNumber: integer("log_number"),
   content: text("content"),
-  uploadedAt: timestamp("uploaded_at", { withTimezone: true }).defaultNow().notNull(),
+  uploadedAt: timestamp("uploaded_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // ─── Caches (server-side only, populated by route handlers) ────────────────
-export const placesCache = app.table("places_cache", {
-  id: bigserial("id", { mode: "number" }).primaryKey(),
-  latBucket: integer("lat_bucket").notNull(), // lat * 1000, rounded
-  lonBucket: integer("lon_bucket").notNull(), // lon * 1000, rounded
-  query: text("query").notNull(),
-  responseJson: text("response_json").notNull(),
-  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
-}, (t) => [primaryKey({ columns: [t.latBucket, t.lonBucket, t.query] })]);
+export const placesCache = pgTable(
+  "places_cache",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    latBucket: integer("lat_bucket").notNull(), // lat * 1000, rounded
+    lonBucket: integer("lon_bucket").notNull(), // lon * 1000, rounded
+    query: text("query").notNull(),
+    responseJson: text("response_json").notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.latBucket, t.lonBucket, t.query] })],
+);
 
-export const geocodeCache = app.table("geocode_cache", {
+export const geocodeCache = pgTable("geocode_cache", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   key: text("key").notNull().unique(), // query string or "lat,lon"
   responseJson: text("response_json").notNull(),
-  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
-export const weatherCache = app.table("weather_cache", {
+export const weatherCache = pgTable("weather_cache", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   key: text("key").notNull().unique(), // "lat,lon,YYYY-MM-DD"
   responseJson: text("response_json").notNull(),
-  fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  fetchedAt: timestamp("fetched_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
 });
 
 // Type helpers — usable in route handlers / server components.

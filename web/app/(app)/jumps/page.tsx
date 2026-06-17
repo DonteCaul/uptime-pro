@@ -3,30 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
-interface JumpsListItem {
-  id: number;
-  filename: string;
-  jumped_at: string | null;
-  exit_altitude_m: number | null;
-  max_freefall_speed_ms: number | null;
-}
-
-/**
- * Jumps list — Phase 1 will port the All / By-Dropzone / Map tabs from
- * the Vite app. For now this proves the RLS-bound server read works.
- */
 export default async function JumpsPage() {
   const supabase = await createServerClient();
-  // TODO: replace this cast with proper generated Supabase types once
-  // migration 0001 is applied (see lib/db/types.ts).
-  const { data: jumps, error } = (await supabase
+  const { data: jumps, error } = await supabase
     .from("jumps")
-    .select("id, filename, jumped_at, exit_altitude_m, max_freefall_speed_ms")
+    .select(
+      "id, filename, jumped_at, exit_altitude_m, max_freefall_speed_ms",
+    )
     .order("jumped_at", { ascending: false, nullsFirst: false })
-    .range(0, 19)) as {
-    data: JumpsListItem[];
-    error: { message: string } | null;
-  };
+    .range(0, 19);
 
   return (
     <div className="space-y-4">

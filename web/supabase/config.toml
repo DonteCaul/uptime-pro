@@ -1,27 +1,39 @@
 # Supabase local config (for `supabase start` / `supabase db reset`).
 # The hosted project is the source of truth for production; this config drives
 # local development only.
+#
+# Config reference: https://supabase.com/docs/guides/local-development/cli/config
 
-project_id = "uptime-pro"
+project_id = "pszugpaddnwvbadjqvex"
 
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "app"]
-extra_search_path = ["public", "app"]
+# All app tables live in the default `public` schema — no custom schema needed.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
 port = 54322
-shadow_project_name = "uptime-pro-shadow"
-major_version = 16
+shadow_port = 54320
+health_timeout = "2m"
+major_version = 17
 
 [db.pooler]
-enabled = true
+enabled = false
 port = 54329
 pool_mode = "transaction"
-default_pool_size = 15
+default_pool_size = 20
 max_client_conn = 100
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
 
 [auth]
 enabled = true
