@@ -24,7 +24,7 @@ export default async function AppLayout({
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Nav userEmail={user.email ?? null} />
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {children}
       </main>
     </div>

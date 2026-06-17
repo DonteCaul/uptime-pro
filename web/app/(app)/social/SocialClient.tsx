@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import dynamic from "next/dynamic";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,8 +24,8 @@ interface BaseUser {
 
 function Avatar({ user, size = 32 }: { user: BaseUser; size?: number }) {
   if (user.avatar_url) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={user.avatar_url}
         alt={user.full_name ?? "avatar"}
@@ -67,9 +67,12 @@ function LeaderRow({
       </span>
       <Avatar user={user} size={32} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">
+        <Link
+          href={`/u/${user.id}`}
+          className="text-sm font-medium text-foreground hover:text-primary hover:underline truncate block"
+        >
           {user.full_name || "Anonymous"}
-        </p>
+        </Link>
       </div>
       <div className="text-right shrink-0">
         <p className="text-sm font-bold text-foreground">{stat}</p>

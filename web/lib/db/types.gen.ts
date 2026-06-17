@@ -212,6 +212,7 @@ export type Database = {
           filename: string
           freefall_duration_s: number | null
           id: number
+          is_public: boolean
           jump_number: number | null
           jumped_at: string | null
           landing_lat: number | null
@@ -237,6 +238,7 @@ export type Database = {
           filename: string
           freefall_duration_s?: number | null
           id?: number
+          is_public?: boolean
           jump_number?: number | null
           jumped_at?: string | null
           landing_lat?: number | null
@@ -262,6 +264,7 @@ export type Database = {
           filename?: string
           freefall_duration_s?: number | null
           id?: number
+          is_public?: boolean
           jump_number?: number | null
           jumped_at?: string | null
           landing_lat?: number | null

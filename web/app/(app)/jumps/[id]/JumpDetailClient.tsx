@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { TelemetryChart } from "@/components/TelemetryChart";
 import { WeatherCard } from "@/components/WeatherCard";
@@ -63,6 +64,7 @@ interface JumpDetail {
   exit_lon: number | null;
   notes: string | null;
   discipline: string | null;
+  is_public: boolean;
   row_count: number | null;
   prev_id: number | null;
   next_id: number | null;
@@ -179,6 +181,7 @@ export function JumpDetailClient({
   const [playbackSpeed, setPlaybackSpeed] = useState(30);
   const [notes, setNotes] = useState(initialJump.notes ?? "");
   const [discipline, setDiscipline] = useState(initialJump.discipline ?? "");
+  const [isPublic, setIsPublic] = useState(initialJump.is_public ?? true);
   const [jumpRunBearing, setJumpRunBearing] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -564,7 +567,7 @@ export function JumpDetailClient({
     const supabase = createBrowserSupabaseClient();
     await supabase
       .from("jumps")
-      .update({ notes, discipline: discipline || null })
+      .update({ notes, discipline: discipline || null, is_public: isPublic })
       .eq("id", jump.id);
     setSaving(false);
   }
@@ -1063,6 +1066,23 @@ export function JumpDetailClient({
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Add notes about this jump…"
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Visibility
+            </label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isPublic
+                ? "Visible on your public profile"
+                : "Private — only you can see this jump"}
+            </p>
+          </div>
+          <Switch
+            checked={isPublic}
+            onCheckedChange={setIsPublic}
           />
         </div>
 
