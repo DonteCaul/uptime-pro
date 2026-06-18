@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { smoothTrack } from "@/lib/smooth";
 import {
   ChevronLeft,
   ChevronRight,
@@ -168,16 +169,8 @@ export function JumpDetailClient({
   const units = useUnits(serverUnits);
   const [jump] = useState(initialJump);
 
-  // Apply median filter to vertical speed (matches original).
-  const track = useMemo(() => {
-    return initialTrack.map((pt, i) => {
-      const win = initialTrack
-        .slice(Math.max(0, i - 2), i + 3)
-        .map((p) => p.inst_vert_speed_ms ?? 0);
-      win.sort((a, b) => a - b);
-      return { ...pt, inst_vert_speed_ms: win[Math.floor(win.length / 2)] };
-    });
-  }, [initialTrack]);
+  // Smooth telemetry: median-filter vertical speed + altitude, clamp per-phase spikes.
+  const track = useMemo(() => smoothTrack(initialTrack), [initialTrack]);
 
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
