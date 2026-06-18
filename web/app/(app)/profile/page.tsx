@@ -28,12 +28,24 @@ interface Profile {
 
 export default async function ProfilePage() {
   const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Fetch the current user's profile by explicit user_id (not .single()).
+  // Using .single() is unsafe here because the profiles table has a
+  // "profiles_select_public" RLS policy that lets authenticated users
+  // read any public profile — so .single() would error with PGRST116
+  // ("more than one row returned") when multiple public profiles exist.
   const { data: profile } = (await supabase
     .from("profiles")
     .select(
       "full_name, email, uptime_user_id, bio, avatar_url, home_dz, home_dz_lat, home_dz_lon, uspa_license, uspa_member_number, burble_name, ratings, canopy_size, wing_load, rig_type, canopy_type, reserve_repack_date, is_public, units, theme",
     )
-    .single()) as { data: Profile & { units: string | null; theme: string | null } | null };
+    .eq("id", user!.id)
+    .single()) as {
+    data: (Profile & { units: string | null; theme: string | null }) | null;
+  };
 
   return (
     <ProfileEditForm
