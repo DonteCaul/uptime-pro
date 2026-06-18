@@ -189,16 +189,15 @@ export default async function JumpsPage({
               <Button
                 variant="secondary"
                 size="sm"
-                asChild={!hasPrev}
+                asChild={hasPrev}
                 disabled={!hasPrev}
               >
-                {hasPrev ? (
-                  <Link href={`/jumps?tab=all&offset=${Math.max(0, offset - PAGE_SIZE)}`}>
-                    ← Prev
-                  </Link>
-                ) : (
-                  "← Prev"
-                )}
+                <Link
+                  href={`/jumps?tab=all&offset=${Math.max(0, offset - PAGE_SIZE)}`}
+                  aria-disabled={!hasPrev}
+                >
+                  ← Prev
+                </Link>
               </Button>
               <span className="text-xs text-muted-foreground">
                 {offset + 1}–{Math.min(offset + PAGE_SIZE, count)} of {count}
@@ -206,15 +205,15 @@ export default async function JumpsPage({
               <Button
                 variant="secondary"
                 size="sm"
+                asChild={hasNext}
                 disabled={!hasNext}
               >
-                {hasNext ? (
-                  <Link href={`/jumps?tab=all&offset=${offset + PAGE_SIZE}`}>
-                    Next →
-                  </Link>
-                ) : (
-                  "Next →"
-                )}
+                <Link
+                  href={`/jumps?tab=all&offset=${offset + PAGE_SIZE}`}
+                  aria-disabled={!hasNext}
+                >
+                  Next →
+                </Link>
               </Button>
             </div>
           )}
