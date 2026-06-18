@@ -15,6 +15,8 @@ import type { Database } from "@/lib/db/types";
  *
  * Returns 201 with a per-file result list.
  */
+export const maxDuration = 60;
+
 const MAX_FILES = 50;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 

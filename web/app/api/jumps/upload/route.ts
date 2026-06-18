@@ -11,6 +11,8 @@ import { ingestJumpFiles, type IngestResult } from "@/lib/dekunu/ingest";
  *
  *   { uploaded: <created count>, results: [{ file, status, ... }] }
  */
+export const maxDuration = 60; // Allow up to 60s for large multi-file ingest
+
 const MAX_FILES = 50;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
