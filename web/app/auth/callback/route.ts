@@ -14,7 +14,11 @@ export async function GET(request: NextRequest) {
   // rather than a query param — Supabase strips custom query params from
   // the redirectTo URL during the OAuth flow.
   const redirectCookie = request.cookies.get("auth-redirect")?.value;
-  const next = redirectCookie ? decodeURIComponent(redirectCookie) : (searchParams.get("next") ?? "/jumps");
+  const next = redirectCookie
+    ? decodeURIComponent(redirectCookie)
+    : (searchParams.get("next") ?? "/jumps");
+
+  console.log("[auth/callback] code present:", !!code, "next:", next, "origin:", origin);
 
   if (code) {
     // Build the redirect response first so cookies can be written onto it.
@@ -41,12 +45,29 @@ export async function GET(request: NextRequest) {
       },
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return redirectResponse;
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    console.log("[auth/callback] exchangeCodeForSession error:", error);
+    console.log("[auth/callback] exchangeCodeForSession session:", data?.session?.user?.email ?? "no session");
+    console.log("[auth/callback] response cookies set:");
+
+    const finalResponse = redirectResponse;
+    // Log all cookies on the response
+    const allCookies = finalResponse.cookies.getAll();
+    for (const c of allCookies) {
+      console.log(`  cookie: ${c.name}=${c.value?.substring(0, 20)}...`);
     }
+
+    if (!error) {
+      return finalResponse;
+    }
+
+    // If exchange failed, redirect to login with error details
+    const errorUrl = new URL("/login", origin);
+    errorUrl.searchParams.set("error", "auth_callback_failed");
+    errorUrl.searchParams.set("details", error.message);
+    return NextResponse.redirect(errorUrl);
   }
 
   // Redirect back to login with an error flag if exchange failed.
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  return NextResponse.redirect(`${origin}/login?error=no_code`);
 }
