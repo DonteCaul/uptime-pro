@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   PlaneTakeoff,
   Activity,
@@ -53,11 +54,17 @@ const STATS = [
 ];
 
 export default async function LandingPage() {
-  // Show a different CTA if the visitor is already signed in.
   const supabase = await createServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // If the visitor is already signed in, redirect straight to the dashboard.
+  // This catches edge cases where the OAuth callback redirect doesn't land on
+  // /dashboard (e.g., Site URL misconfiguration, cookie issues, etc.).
+  if (user) {
+    redirect("/dashboard");
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

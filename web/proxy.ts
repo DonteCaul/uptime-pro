@@ -8,7 +8,7 @@ import type { Database } from "@/lib/db/types";
  * routes. Mirrors the official @supabase/ssr Next.js pattern.
  *
  * - `(app)/*` routes require a signed-in user; redirects to /login otherwise.
- * - `/login` and `/register` redirect to /jumps if already signed in.
+ * - `/login` and `/register` redirect to /dashboard if already signed in.
  * - The Dekunu device layer (`/v1/*`) and `/api/*` are not auth-gated here —
  *   they carry their own auth (device JWTs, service-role checks).
  */
@@ -65,7 +65,7 @@ export async function proxy(request: NextRequest) {
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/jumps";
+    url.pathname = "/dashboard";
     url.searchParams.delete("redirect");
     return NextResponse.redirect(url);
   }
