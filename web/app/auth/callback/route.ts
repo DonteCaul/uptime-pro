@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get("next") ?? "/jumps";
 
   if (code) {
-    // Build the redirect response first so we can set cookies on it.
+    // Build the redirect response first so cookies can be written onto it.
     const redirectResponse = NextResponse.redirect(`${origin}${next}`);
 
     const supabase = createServerClient<Database>(
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
-            // Write session cookies onto the response, not the request.
+            // Write onto the response, not the request.
             cookiesToSet.forEach(({ name, value, options }) =>
               redirectResponse.cookies.set(name, value, options),
             );
