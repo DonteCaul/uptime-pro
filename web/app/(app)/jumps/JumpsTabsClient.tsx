@@ -326,17 +326,21 @@ export function JumpsTabsClient({
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [geocoding, setGeocoding] = useState(false);
 
-  // Fetch up to 1000 jumps for the tab (mirrors original).
+  // Fetch up to 1000 jumps for the current user (not global).
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
-    supabase
-      .from("jumps")
-      .select(
-        "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, exit_lat, exit_lon, dz_lat, dz_lon",
-      )
-      .order("jumped_at", { ascending: false, nullsFirst: false })
-      .range(0, 999)
-      .then(({ data }) => setAllJumps((data ?? []) as JumpRow[]));
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      supabase
+        .from("jumps")
+        .select(
+          "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, exit_lat, exit_lon, dz_lat, dz_lon",
+        )
+        .eq("user_id", user.id)
+        .order("jumped_at", { ascending: false, nullsFirst: false })
+        .range(0, 999)
+        .then(({ data }) => setAllJumps((data ?? []) as JumpRow[]));
+    });
   }, []);
 
   // Dropzone tab: cluster + geocode once jumps load.
@@ -352,11 +356,11 @@ export function JumpsTabsClient({
 
       const dzList = await fetchDropzonesInBbox(cs);
       if (cancelled) return;
-      const radiusKm10 = 19.312;
+      const radiusKm10 = 16.093; // 10 miles in km
       const names = await Promise.all(
         cs.map(async (c) => {
           if (!c.lat || !c.lon) return "No GPS Data";
-          // Find nearest DZ within 12 miles.
+          // Find nearest DZ within 10 miles.
           let best: { name: string; dist: number } | null = null;
           for (const dz of dzList) {
             const dist = haversineKm(c.lat, c.lon, dz.lat, dz.lon);

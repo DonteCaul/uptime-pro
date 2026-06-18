@@ -97,16 +97,22 @@ export default async function JumpsPage({
   const supabase = await createServerClient();
 
   // Resolve unit preference (defaults to metric).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id;
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("units")
     .single();
   const units = (profile?.units ?? "metric") as UnitSystem;
 
-  // Fetch the total count (cheap) — always needed for the header.
+  // Fetch the total count for the current user only.
   const { count } = await supabase
     .from("jumps")
-    .select("id", { count: "exact", head: true });
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId!);
 
   // All-tab fetches a paginated slice server-side.
   const { data: pageJumps } = await supabase
@@ -114,6 +120,7 @@ export default async function JumpsPage({
     .select(
       "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms",
     )
+    .eq("user_id", userId!)
     .order("jumped_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + PAGE_SIZE - 1);
   const jumps = (pageJumps ?? []) as JumpRow[];
