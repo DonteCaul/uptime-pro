@@ -1,19 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { ingestJumpFiles, type IngestResult } from "@/lib/dekunu/ingest";
+import { ingestJumpFile, type IngestResult } from "@/lib/dekunu/ingest";
 
 /**
- * CSV upload endpoint — mirrors the original POST /jumps/upload.
+ * CSV upload endpoint — accepts one .csv file per request.
  *
- * Accepts multipart/form-data with a `files[]` field (up to 50 .csv files,
- * 50MB each). Each file is parsed by the shared ingest pipeline and inserted
- * with per-file dedupe. Returns 207 multi-status:
+ * The client uploads files sequentially (one per request) so each file gets
+ * its own response immediately — no timeout risk from batching 50 files.
  *
- *   { uploaded: <created count>, results: [{ file, status, ... }] }
+ * Accepts multipart/form-data with a `file` field. Returns 207 multi-status:
+ *
+ *   { results: [{ file, status, ... }] }
  */
-export const maxDuration = 60; // Allow up to 60s for large multi-file ingest
-
-const MAX_FILES = 50;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
 export async function POST(request: NextRequest) {
@@ -34,52 +32,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
   }
 
-  const files = formData.getAll("files[]").filter(
-    (f): f is File => f instanceof File,
-  );
+  // Accept either `file` (single-file) or `files[]` (legacy multi-file) key.
+  const file = (formData.get("file") ?? formData.getAll("files[]")[0]) as
+    | File
+    | null;
 
-  if (!files.length) {
-    return NextResponse.json({ error: "No files uploaded" }, { status: 400 });
-  }
-  if (files.length > MAX_FILES) {
+  if (!file || !(file instanceof File)) {
     return NextResponse.json(
-      { error: `Too many files (max ${MAX_FILES})` },
+      { error: "No file uploaded" },
       { status: 400 },
     );
   }
 
-  // 3. Read each file into memory + validate extension/size.
-  const toIngest: { filename: string; buffer: Buffer }[] = [];
-  for (const file of files) {
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      continue; // Skip non-CSV silently (matches original multer fileFilter)
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      return NextResponse.json(
-        { error: `${file.name} exceeds 50MB` },
-        { status: 413 },
-      );
-    }
-    const arrayBuffer = await file.arrayBuffer();
-    toIngest.push({
-      filename: file.name,
-      buffer: Buffer.from(arrayBuffer),
-    });
-  }
-
-  if (!toIngest.length) {
+  if (!file.name.toLowerCase().endsWith(".csv")) {
     return NextResponse.json(
-      { error: "No CSV files found" },
+      { error: "Only .csv files are accepted" },
       { status: 400 },
     );
   }
 
-  // 4. Run the shared ingest pipeline.
-  const results: IngestResult[] = await ingestJumpFiles(user.id, toIngest);
-  const created = results.filter((r) => r.status === "created").length;
+  if (file.size > MAX_FILE_BYTES) {
+    return NextResponse.json(
+      { error: `${file.name} exceeds 50MB` },
+      { status: 413 },
+    );
+  }
 
-  return NextResponse.json(
-    { uploaded: created, results },
-    { status: 207 },
-  );
+  // 3. Read file into memory and run the ingest pipeline.
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const result: IngestResult = await ingestJumpFile(user.id, file.name, buffer);
+
+  return NextResponse.json({ results: [result] }, { status: 207 });
 }
