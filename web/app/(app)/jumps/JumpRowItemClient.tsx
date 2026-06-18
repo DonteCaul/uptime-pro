@@ -75,11 +75,7 @@ export function JumpRowItemClient({
                 {speed(jump.max_freefall_speed_ms, units)}
               </span>
             )}
-            {jump.row_count != null && (
-              <span className="text-xs text-muted-foreground">
-                {jump.row_count.toLocaleString()} rows
-              </span>
-            )}
+
           </div>
         </div>
       </div>
