@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { TelemetryChart } from "@/components/TelemetryChart";
 import { WeatherCard } from "@/components/WeatherCard";
 import { alt, speed, gpsSpeed, type UnitSystem } from "@/lib/units";
+import { useUnits } from "@/lib/useUnits";
 import { fmtDuration } from "@/lib/format";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { encodeJumpId } from "@/lib/slug";
@@ -156,7 +157,7 @@ export function JumpDetailClient({
   jump: initialJump,
   track: initialTrack,
   weather,
-  units,
+  units: serverUnits,
 }: {
   jump: JumpDetail;
   track: TrackPoint[];
@@ -164,6 +165,7 @@ export function JumpDetailClient({
   units: UnitSystem;
 }) {
   const router = useRouter();
+  const units = useUnits(serverUnits);
   const [jump] = useState(initialJump);
 
   // Apply median filter to vertical speed (matches original).

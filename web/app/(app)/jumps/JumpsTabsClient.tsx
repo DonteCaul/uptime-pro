@@ -15,6 +15,7 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { alt, speed, type UnitSystem } from "@/lib/units";
+import { useUnits } from "@/lib/useUnits";
 import { fmtDuration } from "@/lib/format";
 import { encodeJumpId } from "@/lib/slug";
 import dynamic from "next/dynamic";
@@ -317,11 +318,12 @@ function DropzoneCard({
 
 export function JumpsTabsClient({
   tab,
-  units,
+  units: serverUnits,
 }: {
   tab: "dropzone" | "map";
   units: UnitSystem;
 }) {
+  const units = useUnits(serverUnits);
   const [allJumps, setAllJumps] = useState<JumpRow[] | null>(null);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [geocoding, setGeocoding] = useState(false);
@@ -401,7 +403,7 @@ export function JumpsTabsClient({
     return (
       <div
         className="-mx-4 -mb-4 overflow-hidden"
-        style={{ height: "calc(100vh - 176px)" }}
+        style={{ height: "calc((100vh - 60px) * 1.5)" }}
       >
         <JumpMap jumps={allJumps} theme="light" />
       </div>

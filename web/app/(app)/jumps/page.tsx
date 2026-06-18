@@ -30,6 +30,7 @@ interface JumpRow {
   opening_peak_g: number | null;
   is_swoop: boolean | null;
   swoop_speed_knot: number | null;
+  row_count: number | null;
 }
 
 function JumpRowItem({
@@ -115,6 +116,11 @@ function JumpRowItem({
                 Swoop
               </span>
             )}
+            {jump.row_count != null && (
+              <span className="text-xs text-muted-foreground">
+                {jump.row_count.toLocaleString()} rows
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -156,7 +162,7 @@ export default async function JumpsPage({
   const { data: pageJumps } = await supabase
     .from("jumps")
     .select(
-      "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, avg_freefall_speed_ms, avg_glide_ratio, landing_speed_knot, opening_peak_g, is_swoop, swoop_speed_knot",
+      "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, avg_freefall_speed_ms, avg_glide_ratio, landing_speed_knot, opening_peak_g, is_swoop, swoop_speed_knot, row_count",
     )
     .eq("user_id", userId!)
     .order("jumped_at", { ascending: false, nullsFirst: false })

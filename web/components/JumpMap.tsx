@@ -145,7 +145,7 @@ export default function JumpMap({ jumps, theme }: JumpMapProps) {
         // Fit map to jump locations.
         if (features.length === 1) {
           map.setCenter(features[0].geometry.coordinates as [number, number]);
-          map.setZoom(10);
+          map.setZoom(13);
         } else if (features.length > 1) {
           const bounds = features.reduce(
             (b, f) =>
@@ -155,7 +155,7 @@ export default function JumpMap({ jumps, theme }: JumpMapProps) {
               features[0].geometry.coordinates as [number, number],
             ),
           );
-          map.fitBounds(bounds, { padding: 60, maxZoom: 12 });
+          map.fitBounds(bounds, { padding: 40, maxZoom: 14 });
         }
 
         map.on("click", "clusters", (e) => {
