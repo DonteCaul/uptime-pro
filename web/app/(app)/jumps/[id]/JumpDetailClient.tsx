@@ -124,14 +124,21 @@ function StatChip({
   label,
   value,
   accent,
+  onClick,
 }: {
   label: string;
   value: string | null;
   accent?: string;
+  onClick?: () => void;
 }) {
   return (
-    <div
-      className="flex flex-col items-center justify-center rounded-md px-3 py-2 min-w-[80px] shrink-0 border border-border"
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex flex-col items-center justify-center rounded-md px-3 py-2 min-w-[80px] shrink-0 border border-border transition-colors",
+        onClick && "cursor-pointer hover:bg-accent/60 active:scale-95",
+      )}
       style={
         accent
           ? {
@@ -150,7 +157,7 @@ function StatChip({
       >
         {value ?? "—"}
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -518,6 +525,54 @@ export function JumpDetailClient({
     return { avgGlide, landingKt, isSwoop, swoopKt, peakG, avgG, avgFF };
   }, [track]);
 
+  // ── Key event track indices (for clickable stat chips) ──────────────────
+  const eventIndices = useMemo(() => {
+    const toNum = (v: number | string | null | undefined): number | null =>
+      v == null ? null : +v;
+
+    // Exit: highest altitude point
+    let exitIdx = 0;
+    let maxAlt = -Infinity;
+    for (let i = 0; i < track.length; i++) {
+      const a = toNum(track[i].altitude_m);
+      if (a != null && a > maxAlt) { maxAlt = a; exitIdx = i; }
+    }
+
+    // Deploy: first canopy-mode row after freefall
+    let deployIdx = -1;
+    let ffStarted = false;
+    for (let i = 0; i < track.length; i++) {
+      if (track[i].device_mode === 3) ffStarted = true;
+      if (ffStarted && track[i].device_mode === 4) { deployIdx = i; break; }
+    }
+
+    // Max speed: absolute max vertical speed during freefall
+    let maxSpeedIdx = 0;
+    let maxSpeedVal = -Infinity;
+    for (let i = 0; i < track.length; i++) {
+      if (track[i].device_mode !== 3) continue;
+      const v = Math.abs(toNum(track[i].inst_vert_speed_ms) ?? 0);
+      if (v > maxSpeedVal) { maxSpeedVal = v; maxSpeedIdx = i; }
+    }
+
+    // Open G: peak G-force within 30-sample window around deployment
+    const gMag = (p: TrackPoint) =>
+      Math.sqrt(
+        (toNum(p.accel_x) || 0) ** 2 +
+          (toNum(p.accel_y) || 0) ** 2 +
+          (toNum(p.accel_z) || 0) ** 2,
+      ) / 7500;
+    let peakGIdx = deployIdx >= 0 ? deployIdx : 0;
+    let peakGVal = -Infinity;
+    const openEnd = Math.min(track.length, (deployIdx >= 0 ? deployIdx : 0) + 30);
+    for (let i = deployIdx >= 0 ? deployIdx : 0; i < openEnd; i++) {
+      const g = gMag(track[i]);
+      if (g > peakGVal) { peakGVal = g; peakGIdx = i; }
+    }
+
+    return { exitIdx, deployIdx, maxSpeedIdx, peakGIdx };
+  }, [track]);
+
   const currentPt = track[cursor] ?? null;
   const phase = getPhase(currentPt);
   const phaseColor = PHASE_COLOR[phase] ?? "#888";
@@ -619,6 +674,7 @@ export function JumpDetailClient({
           label="Exit Alt"
           value={alt(jump.exit_altitude_m, units)}
           accent="#00cc55"
+          onClick={() => setCursor(eventIndices.exitIdx)}
         />
         <StatChip
           label="FF Time"
@@ -629,11 +685,13 @@ export function JumpDetailClient({
           label="Max Speed"
           value={speed(jump.max_freefall_speed_ms, units)}
           accent="#ff3333"
+          onClick={() => setCursor(eventIndices.maxSpeedIdx)}
         />
         <StatChip
           label="Deploy Alt"
           value={alt(jump.deployment_altitude_m, units)}
           accent="#3399ff"
+          onClick={() => setCursor(eventIndices.deployIdx)}
         />
         <StatChip
           label="Canopy"
@@ -659,6 +717,7 @@ export function JumpDetailClient({
             label="Open G"
             value={`${analysis.peakG.toFixed(1)}G`}
             accent="#C084FC"
+            onClick={() => setCursor(eventIndices.peakGIdx)}
           />
         )}
         {analysis?.avgG != null && (
