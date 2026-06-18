@@ -218,6 +218,13 @@ export type Database = {
           landing_lat: number | null
           landing_lon: number | null
           max_freefall_speed_ms: number | null
+          avg_freefall_speed_ms: number | null
+          avg_glide_ratio: number | null
+          landing_speed_knot: number | null
+          opening_peak_g: number | null
+          avg_g_force: number | null
+          is_swoop: boolean
+          swoop_speed_knot: number | null
           notes: string | null
           raw_file_storage_key: string | null
           row_count: number | null
@@ -244,6 +251,13 @@ export type Database = {
           landing_lat?: number | null
           landing_lon?: number | null
           max_freefall_speed_ms?: number | null
+          avg_freefall_speed_ms?: number | null
+          avg_glide_ratio?: number | null
+          landing_speed_knot?: number | null
+          opening_peak_g?: number | null
+          avg_g_force?: number | null
+          is_swoop?: boolean | null
+          swoop_speed_knot?: number | null
           notes?: string | null
           raw_file_storage_key?: string | null
           row_count?: number | null
@@ -270,6 +284,13 @@ export type Database = {
           landing_lat?: number | null
           landing_lon?: number | null
           max_freefall_speed_ms?: number | null
+          avg_freefall_speed_ms?: number | null
+          avg_glide_ratio?: number | null
+          landing_speed_knot?: number | null
+          opening_peak_g?: number | null
+          avg_g_force?: number | null
+          is_swoop?: boolean | null
+          swoop_speed_knot?: number | null
           notes?: string | null
           raw_file_storage_key?: string | null
           row_count?: number | null
@@ -460,6 +481,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      compute_jump_analysis: {
+        Args: { jump_id: number }
+        Returns: undefined
+      }
       import_legacy_users: {
         Args: never
         Returns: {

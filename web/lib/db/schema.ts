@@ -123,6 +123,16 @@ export const jumps = pgTable("jumps", {
   notes: text("notes"),
   rawFileStorageKey: text("raw_file_storage_key"),
   rowCount: integer("row_count"),
+
+  // Jump analysis (computed by compute_jump_analysis RPC)
+  avgFreefallSpeedMs: numeric("avg_freefall_speed_ms"),
+  avgGlideRatio: numeric("avg_glide_ratio"),
+  landingSpeedKnot: numeric("landing_speed_knot"),
+  openingPeakG: numeric("opening_peak_g"),
+  avgGForce: numeric("avg_g_force"),
+  isSwoop: boolean("is_swoop").default(false).notNull(),
+  swoopSpeedKnot: numeric("swoop_speed_knot"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

@@ -45,7 +45,7 @@ export default async function JumpsPage({
   const { data: pageJumps } = await supabase
     .from("jumps")
     .select(
-      "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, row_count",
+      "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, avg_glide_ratio, landing_speed_knot, opening_peak_g, is_swoop, row_count",
     )
     .eq("user_id", userId!)
     .order("jumped_at", { ascending: false, nullsFirst: false })

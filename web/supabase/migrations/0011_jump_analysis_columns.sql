@@ -16,7 +16,13 @@ alter table public.jumps
 
 -- Function: compute analysis for a single jump from its sensor data.
 -- Called during ingest after all data points are inserted.
-create or replace function public.compute_jump_analysis(jump_id integer)
+--
+-- IMPORTANT: The `deploy` CTE must be defined BEFORE `g_window` and `avg_g`
+-- because Postgres does not allow forward references in WITH clauses.
+-- The `landing` CTE uses `row_number() over (order by ...)` instead of
+-- bare `ORDER BY ... LIMIT` in a subquery — pgbouncer's parser rejects the
+-- latter inside CREATE FUNCTION but accepts window functions.
+create or replace function public.compute_jump_analysis(p_jump_id integer)
 returns void
 language sql
 volatile
@@ -24,26 +30,26 @@ security definer set search_path = public
 as $$
   with ff as (
     select inst_vert_speed_ms
-    from public.jump_data_points
-    where jump_id = compute_jump_analysis.jump_id
+    from jump_data_points
+    where jump_id = p_jump_id
       and device_mode = 3
       and inst_vert_speed_ms is not null
   ),
   canopy as (
-    select inst_vert_speed_ms, gps_speed_knot, altitude_above_ground_m
-    from public.jump_data_points
-    where jump_id = compute_jump_analysis.jump_id
+    select inst_vert_speed_ms, gps_speed_knot, altitude_above_ground_m, sample_ms
+    from jump_data_points
+    where jump_id = p_jump_id
       and device_mode = 4
   ),
   landing as (
     select avg(gps_speed_knot) as spd
     from (
-      select gps_speed_knot
+      select gps_speed_knot,
+             row_number() over (order by sample_ms desc) as rn
       from canopy
       where gps_speed_knot is not null
-      order by sample_ms desc nulls last
-      limit 10
     ) t
+    where rn <= 10
   ),
   swoop_check as (
     select max(gps_speed_knot) as peak
@@ -61,8 +67,8 @@ as $$
   ),
   deploy as (
     select min(sample_ms) as deploy_time
-    from public.jump_data_points
-    where jump_id = compute_jump_analysis.jump_id
+    from jump_data_points
+    where jump_id = p_jump_id
       and device_mode = 4
   ),
   g_window as (
@@ -72,8 +78,8 @@ as $$
         coalesce(accel_y, 0) ^ 2 +
         coalesce(accel_z, 0) ^ 2
       ) / 7500 as g_mag
-    from public.jump_data_points
-    where jump_id = compute_jump_analysis.jump_id
+    from jump_data_points
+    where jump_id = p_jump_id
       and (device_mode = 3 or device_mode = 4)
       and sample_ms >= coalesce((select deploy_time from deploy), 0)
       and sample_ms < coalesce((select deploy_time from deploy), 0) + 30
@@ -86,34 +92,24 @@ as $$
         coalesce(accel_z, 0) ^ 2
       ) / 7500
     ) as g
-    from public.jump_data_points p, deploy d
-    where p.jump_id = compute_jump_analysis.jump_id
-      and (p.device_mode = 3 or p.device_mode = 4)
-      and (p.sample_ms < d.deploy_time or p.sample_ms >= d.deploy_time + 30)
+    from jump_data_points p2, deploy d
+    where p2.jump_id = p_jump_id
+      and (p2.device_mode = 3 or p2.device_mode = 4)
+      and (p2.sample_ms < d.deploy_time or p2.sample_ms >= d.deploy_time + 30)
   )
-  update public.jumps
+  update jumps
   set avg_freefall_speed_ms = (select avg(abs(inst_vert_speed_ms)) from ff),
       avg_glide_ratio        = (select ratio from glide),
       landing_speed_knot     = (select spd from landing),
       opening_peak_g         = (select max(g_mag) from g_window),
       avg_g_force            = (select g from avg_g),
-      is_swoop               = (select (peak > 40) from swoop_check),
+      is_swoop               = coalesce((select (peak > 40) from swoop_check), false),
       swoop_speed_knot       = (select peak from swoop_check)
-  where id = compute_jump_analysis.jump_id;
+  where id = p_jump_id;
 $$;
 
 -- Backfill existing jumps that have sensor data.
 -- Runs as a one-shot; new jumps get populated during ingest.
-insert into public.system_logs (user_id, message)
-select
-  p.id,
-  'jump_analysis_backfill: ' || count(*)::text || ' jumps analyzed'
-from (select id from public.jumps where avg_freefall_speed_ms is null) j
-join public.profiles p on p.id = j.user_id
-limit 1
-on conflict do nothing;
-
--- Run the backfill for all jumps missing analysis (idempotent).
 do $$
 declare
   cnt integer := 0;
