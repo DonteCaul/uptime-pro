@@ -149,19 +149,7 @@ export async function ingestJumpFile(
       }
     }
 
-    // 7. Compute analysis summary from sensor data.
-    if (rows.length) {
-      try {
-        await admin.rpc("compute_jump_analysis", { jump_id: jumpId });
-      } catch (analysisErr) {
-        console.warn(
-          `[ingest] analysis computation failed for ${filename}:`,
-          analysisErr instanceof Error ? analysisErr.message : analysisErr,
-        );
-      }
-    }
-
-    // 8. Archive the raw CSV to Storage (best-effort — non-fatal if it fails).
+    // 7. Archive the raw CSV to Storage (best-effort — non-fatal if it fails).
     try {
       await admin.storage
         .from("jump-csv")
