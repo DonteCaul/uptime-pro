@@ -147,10 +147,16 @@ export function ProfileEditForm({
   initialProfile,
   initialUnits,
   initialTheme,
+  latestDevice,
 }: {
   initialProfile: Profile | null;
   initialUnits: "metric" | "imperial";
   initialTheme: "light" | "dark";
+  latestDevice: {
+    device_type: string | null;
+    hardware_serial: string | null;
+    last_seen_at: string | null;
+  } | null;
 }) {
   const [form, setForm] = useState<FormState>(() => toForm(initialProfile));
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
@@ -632,31 +638,54 @@ export function ProfileEditForm({
         </CardContent>
       </Card>
 
-      {/* Device sync (Phase 3 — disabled for now) */}
+      {/* Device sync */}
       <Card>
         <CardHeader>
           <CardTitle>Device Sync</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between opacity-60">
+          {latestDevice?.last_seen_at ? (
             <div className="flex items-center gap-2">
+              <Wifi size={16} className="text-green-500" />
+              <div>
+                <p className="text-sm text-foreground">
+                  Dekunu device sync
+                  {latestDevice.device_type && (
+                    <span className="text-xs text-muted-foreground ml-1.5">
+                      ({latestDevice.device_type})
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Last sync{" "}
+                  {new Date(latestDevice.last_seen_at).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 opacity-60">
               <Wifi size={16} className="text-muted-foreground" />
               <div>
                 <div className="flex items-center gap-2">
                   <Label className="text-sm text-foreground">
                     Dekunu device sync
                   </Label>
-                  <span className="text-[10px] font-semibold bg-red-500 text-white rounded px-1.5 py-0.5 leading-none">
-                    Needs Device
+                  <span className="text-[10px] font-semibold bg-yellow-500 text-white rounded px-1.5 py-0.5 leading-none">
+                    No Device
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Set DEKUNU_COMPAT=true to enable
+                  No device has synced yet
                 </p>
               </div>
             </div>
-            <Switch checked={false} disabled />
-          </div>
+          )}
         </CardContent>
       </Card>
 

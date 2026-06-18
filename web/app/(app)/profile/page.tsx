@@ -47,11 +47,21 @@ export default async function ProfilePage() {
     data: (Profile & { units: string | null; theme: string | null }) | null;
   };
 
+  // Fetch the most recently seen device for the "last sync" display.
+  const { data: deviceRows } = await supabase
+    .from("devices")
+    .select("device_type, hardware_serial, last_seen_at")
+    .eq("current_user_id", user!.id)
+    .order("last_seen_at", { ascending: false, nullsFirst: false })
+    .limit(1);
+  const latestDevice = deviceRows?.[0] ?? null;
+
   return (
     <ProfileEditForm
       initialProfile={profile}
       initialUnits={(profile?.units as "metric" | "imperial") ?? "metric"}
       initialTheme={(profile?.theme as "light" | "dark") ?? "light"}
+      latestDevice={latestDevice}
     />
   );
 }
