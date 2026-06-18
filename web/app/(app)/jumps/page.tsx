@@ -65,11 +65,6 @@ export default async function JumpsPage({
     <div className="flex flex-col gap-4 pb-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-foreground">Jump Log</h2>
-        {count != null && (
-          <span className="text-sm text-muted-foreground">
-            {count} jumps
-          </span>
-        )}
       </div>
 
       {/* Tab navigation — links that set ?tab=, preserving offset only for All. */}
