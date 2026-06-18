@@ -222,6 +222,23 @@ export function ProfileEditForm({
   }
 
   /** Geocode the entered address via the cached server proxies. */
+  /** Haversine distance between two lat/lon points in meters. */
+  function haversineM(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const R = 6_371_000;
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
   async function resolveHomeDz(address: string): Promise<{
     lat: number;
     lon: number;
@@ -242,20 +259,23 @@ export function ProfileEditForm({
     const [lon, lat] = feature.center as [number, number];
 
     // 2. Look up nearby dropzones via cached /api/places/nearby.
+    //    Google Places locationBias is a *suggestion*, not a hard filter,
+    //    so we verify distance client-side with Haversine.
+    const MAX_RADIUS_M = 16093; // 10 miles
     try {
       const placesRes = await fetch(
-        `/api/places/nearby?lat=${lat}&lon=${lon}&radius=16093`,
+        `/api/places/nearby?lat=${lat}&lon=${lon}&radius=${MAX_RADIUS_M}`,
       );
       if (placesRes.ok) {
         const places = await placesRes.json();
-        if (places.places?.length) {
-          const first = places.places[0];
-          return {
-            lat: first.lat ?? lat,
-            lon: first.lon ?? lon,
-            name: first.name ?? trimmed,
-          };
+        for (const p of places.places ?? []) {
+          if (p.lat == null || p.lon == null) continue;
+          const d = haversineM(lat, lon, p.lat, p.lon);
+          if (d <= MAX_RADIUS_M) {
+            return { lat: p.lat, lon: p.lon, name: p.name ?? trimmed };
+          }
         }
+        // No dropzone within 10 miles — fall through to raw geocode.
       }
     } catch {
       // fall through to raw geocode result
