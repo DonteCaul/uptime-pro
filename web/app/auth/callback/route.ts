@@ -9,11 +9,19 @@ import type { Database } from "@/lib/db/types";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/jumps";
+
+  // Read the post-login redirect from the cookie (set by the login form)
+  // rather than a query param — Supabase strips custom query params from
+  // the redirectTo URL during the OAuth flow.
+  const redirectCookie = request.cookies.get("auth-redirect")?.value;
+  const next = redirectCookie ? decodeURIComponent(redirectCookie) : (searchParams.get("next") ?? "/jumps");
 
   if (code) {
     // Build the redirect response first so cookies can be written onto it.
     const redirectResponse = NextResponse.redirect(`${origin}${next}`);
+
+    // Clear the redirect cookie so it's not reused on future logins.
+    redirectResponse.cookies.delete("auth-redirect");
 
     const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

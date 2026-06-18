@@ -474,10 +474,14 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                 className="w-full"
                 disabled={loading}
                 onClick={async () => {
+                  // Store the post-login redirect in a cookie so the
+                  // callback route can read it after Supabase strips
+                  // custom query params from the redirectTo URL.
+                  document.cookie = `auth-redirect=${encodeURIComponent(redirect)};path=/;max-age=600;SameSite=Lax`;
                   const supabase = createBrowserSupabaseClient();
                   await supabase.auth.signInWithOAuth({
                     provider: "google",
-                    options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirect)}` },
+                    options: { redirectTo: `${window.location.origin}/auth/callback` },
                   });
                 }}
               >
