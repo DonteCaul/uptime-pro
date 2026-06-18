@@ -4,7 +4,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { alt, speed, type UnitSystem } from "@/lib/units";
+import { alt, speed, gpsSpeed, type UnitSystem } from "@/lib/units";
 import { fmtDuration } from "@/lib/format";
 import { encodeJumpId } from "@/lib/slug";
 import { JumpsTabsClient } from "./JumpsTabsClient";
@@ -24,6 +24,12 @@ interface JumpRow {
   exit_lon: number | null;
   dz_lat: number | null;
   dz_lon: number | null;
+  avg_freefall_speed_ms: number | null;
+  avg_glide_ratio: number | null;
+  landing_speed_knot: number | null;
+  opening_peak_g: number | null;
+  is_swoop: boolean | null;
+  swoop_speed_knot: number | null;
 }
 
 function JumpRowItem({
@@ -77,6 +83,38 @@ function JumpRowItem({
                 {speed(jump.max_freefall_speed_ms, units)}
               </span>
             )}
+            {jump.avg_freefall_speed_ms && (
+              <span className="text-xs text-muted-foreground">
+                Avg {speed(jump.avg_freefall_speed_ms, units)}
+              </span>
+            )}
+            {jump.avg_glide_ratio != null && (
+              <span className="text-xs text-muted-foreground">
+                {jump.avg_glide_ratio.toFixed(1)}:1
+              </span>
+            )}
+            {jump.landing_speed_knot != null && (
+              <span className="text-xs text-muted-foreground">
+                ↓ {gpsSpeed(jump.landing_speed_knot, units)}
+              </span>
+            )}
+            {jump.opening_peak_g != null && (
+              <span className="text-xs" style={{ color: "#C084FC" }}>
+                {jump.opening_peak_g.toFixed(1)}G
+              </span>
+            )}
+            {jump.is_swoop && (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                style={{
+                  background: "#FFD70020",
+                  color: "#FFD700",
+                  border: "1px solid #FFD70040",
+                }}
+              >
+                Swoop
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -118,7 +156,7 @@ export default async function JumpsPage({
   const { data: pageJumps } = await supabase
     .from("jumps")
     .select(
-      "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms",
+      "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, avg_freefall_speed_ms, avg_glide_ratio, landing_speed_knot, opening_peak_g, is_swoop, swoop_speed_knot",
     )
     .eq("user_id", userId!)
     .order("jumped_at", { ascending: false, nullsFirst: false })
