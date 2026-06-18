@@ -20,7 +20,6 @@ function revalidateAllPrefRoutes() {
   revalidatePath("/devices/[deviceId]", "page");
   revalidatePath("/social");
   revalidatePath("/profile");
-  revalidatePath("/settings");
   revalidatePath("/u/[id]", "page");
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
-import { Camera, Check, Loader2 } from "lucide-react";
+import { useState, useRef, useTransition, useEffect } from "react";
+import { Camera, Check, Loader2, Moon, Sun, Wifi } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { updateProfile } from "@/lib/actions/profile";
+import { updateProfile, updatePreferences } from "@/lib/actions/profile";
 import type { Database } from "@/lib/db/types";
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
@@ -143,8 +143,12 @@ function RepackCountdown({ date }: { date: string }) {
 
 export function ProfileEditForm({
   initialProfile,
+  initialUnits,
+  initialTheme,
 }: {
   initialProfile: Profile | null;
+  initialUnits: "metric" | "imperial";
+  initialTheme: "light" | "dark";
 }) {
   const [form, setForm] = useState<FormState>(() => toForm(initialProfile));
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
@@ -160,6 +164,36 @@ export function ProfileEditForm({
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [resolvingDz, setResolvingDz] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // ── Live settings (theme, units) ──────────────────────────────────
+  const [units, setUnits] = useState<"metric" | "imperial">(initialUnits);
+  const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
+  const [, startPrefTransition] = useTransition();
+
+  // Sync theme to the DOM + localStorage immediately (prevents flash).
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("uptime-theme", theme);
+  }, [theme]);
+
+  // Keep localStorage units in sync.
+  useEffect(() => {
+    localStorage.setItem("uptime-units", units);
+  }, [units]);
+
+  function persistTheme(next: "light" | "dark") {
+    setTheme(next);
+    startPrefTransition(() => {
+      void updatePreferences({ theme: next });
+    });
+  }
+
+  function persistUnits(next: "metric" | "imperial") {
+    setUnits(next);
+    startPrefTransition(() => {
+      void updatePreferences({ units: next });
+    });
+  }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -528,6 +562,80 @@ export function ProfileEditForm({
           "Save Changes"
         )}
       </Button>
+
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Appearance</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {theme === "dark" ? (
+                <Moon size={16} className="text-muted-foreground" />
+              ) : (
+                <Sun size={16} className="text-muted-foreground" />
+              )}
+              <div>
+                <Label className="text-sm text-foreground">Dark mode</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {theme === "dark" ? "Using dark theme" : "Using light theme"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={theme === "dark"}
+              onCheckedChange={(v) => persistTheme(v ? "dark" : "light")}
+            />
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm text-foreground">Imperial units</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Feet · MPH · °F
+              </p>
+            </div>
+            <Switch
+              checked={units === "imperial"}
+              onCheckedChange={(v) => persistUnits(v ? "imperial" : "metric")}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {units === "imperial"
+              ? "Showing imperial — altitudes in ft, speeds in mph."
+              : "Showing metric — altitudes in m, speeds in m/s."}
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Device sync (Phase 3 — disabled for now) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Device Sync</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between opacity-60">
+            <div className="flex items-center gap-2">
+              <Wifi size={16} className="text-muted-foreground" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm text-foreground">
+                    Dekunu device sync
+                  </Label>
+                  <span className="text-[10px] font-semibold bg-red-500 text-white rounded px-1.5 py-0.5 leading-none">
+                    Needs Device
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Set DEKUNU_COMPAT=true to enable
+                </p>
+              </div>
+            </div>
+            <Switch checked={false} disabled />
+          </div>
+        </CardContent>
+      </Card>
     </form>
   );
 }
