@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get("next") ?? "/jumps";
 
   if (code) {
+    // Build the redirect response first so we can set cookies on it.
+    const redirectResponse = NextResponse.redirect(`${origin}${next}`);
+
     const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -21,8 +24,9 @@ export async function GET(request: NextRequest) {
             return request.cookies.getAll();
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value),
+            // Write session cookies onto the response, not the request.
+            cookiesToSet.forEach(({ name, value, options }) =>
+              redirectResponse.cookies.set(name, value, options),
             );
           },
         },
@@ -31,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return redirectResponse;
     }
   }
 
