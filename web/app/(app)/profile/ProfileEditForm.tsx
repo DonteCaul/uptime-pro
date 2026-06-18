@@ -179,6 +179,7 @@ export function ProfileEditForm({
   // Keep localStorage units in sync.
   useEffect(() => {
     localStorage.setItem("uptime-units", units);
+    window.dispatchEvent(new StorageEvent("storage", { key: "uptime-units", newValue: units }));
   }, [units]);
 
   function persistTheme(next: "light" | "dark") {
