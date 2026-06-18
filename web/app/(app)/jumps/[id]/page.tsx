@@ -106,7 +106,8 @@ export default async function JumpDetailPage({
       "sample_ms, device_mode, gps_lat, gps_lon, gps_altitude_m, altitude_m, altitude_above_ground_m, inst_vert_speed_ms, gps_speed_knot, gps_angle_deg, accel_x, accel_y, accel_z, temperature_c, batt_perc",
     )
     .eq("jump_id", id)
-    .order("sample_ms", { ascending: true });
+    .order("sample_ms", { ascending: true })
+    .limit(10000); // PostgREST defaults to 1000; many jumps exceed that
   const track = (trackRows ?? []) as TrackPoint[];
 
   // 4. Weather (server-side via the cached proxy — no key in the browser).
