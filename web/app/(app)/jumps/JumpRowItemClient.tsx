@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { alt, speed, gpsSpeed, type UnitSystem } from "@/lib/units";
+import { alt, speed, type UnitSystem } from "@/lib/units";
 import { fmtDuration } from "@/lib/format";
 import { encodeJumpId } from "@/lib/slug";
 import { useUnits } from "@/lib/useUnits";
@@ -19,10 +19,6 @@ export interface JumpRow {
   exit_lon: number | null;
   dz_lat: number | null;
   dz_lon: number | null;
-  avg_glide_ratio: number | null;
-  landing_speed_knot: number | null;
-  opening_peak_g: number | null;
-  is_swoop: boolean | null;
   row_count: number | null;
 }
 
@@ -77,33 +73,6 @@ export function JumpRowItemClient({
             {jump.max_freefall_speed_ms && (
               <span className="text-xs text-primary">
                 {speed(jump.max_freefall_speed_ms, units)}
-              </span>
-            )}
-            {jump.avg_glide_ratio != null && (
-              <span className="text-xs text-muted-foreground">
-                {jump.avg_glide_ratio.toFixed(1)}:1
-              </span>
-            )}
-            {jump.landing_speed_knot != null && (
-              <span className="text-xs text-muted-foreground">
-                ↓ {gpsSpeed(jump.landing_speed_knot, units)}
-              </span>
-            )}
-            {jump.opening_peak_g != null && (
-              <span className="text-xs" style={{ color: "#C084FC" }}>
-                {jump.opening_peak_g.toFixed(1)}G
-              </span>
-            )}
-            {jump.is_swoop && (
-              <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                style={{
-                  background: "#FFD70020",
-                  color: "#FFD700",
-                  border: "1px solid #FFD70040",
-                }}
-              >
-                Swoop
               </span>
             )}
             {jump.row_count != null && (
