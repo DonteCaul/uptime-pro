@@ -124,7 +124,7 @@ function HomeDzGlobe({ users }: { users: HomeDzUser[] }) {
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: "mapbox://styles/mapbox/satellite-streets-v12",
         // `projection` accepts a string in GL JS v3+; the types lag.
         ...({ projection: "globe" } as Record<string, unknown>),
         zoom: 1.5,
