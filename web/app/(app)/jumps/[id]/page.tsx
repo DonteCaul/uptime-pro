@@ -100,15 +100,27 @@ export default async function JumpDetailPage({
   const units = (profile?.units ?? "metric") as UnitSystem;
 
   // 3. Track (full sensor stream for the replay).
-  const { data: trackRows } = await supabase
-    .from("jump_data_points")
-    .select(
-      "sample_ms, device_mode, gps_lat, gps_lon, gps_altitude_m, altitude_m, altitude_above_ground_m, inst_vert_speed_ms, gps_speed_knot, gps_angle_deg, accel_x, accel_y, accel_z, temperature_c, batt_perc",
-    )
-    .eq("jump_id", id)
-    .order("sample_ms", { ascending: true })
-    .limit(10000); // PostgREST defaults to 1000; many jumps exceed that
-  const track = (trackRows ?? []) as TrackPoint[];
+  //    PostgREST hard-caps responses at 1000 rows on Supabase, so we paginate
+  //    using offset to fetch the complete dataset.
+  const TRACK_COLS =
+    "sample_ms, device_mode, gps_lat, gps_lon, gps_altitude_m, altitude_m, altitude_above_ground_m, inst_vert_speed_ms, gps_speed_knot, gps_angle_deg, accel_x, accel_y, accel_z, temperature_c, batt_perc";
+  const PAGE_SIZE = 1000;
+  let allRows: TrackPoint[] = [];
+  let offset = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { data: pageRows } = await supabase
+      .from("jump_data_points")
+      .select(TRACK_COLS)
+      .eq("jump_id", id)
+      .order("sample_ms", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (!pageRows?.length) break;
+    allRows.push(...pageRows);
+    if (pageRows.length < PAGE_SIZE) break; // last page
+    offset += PAGE_SIZE;
+  }
+  const track = allRows;
 
   // 4. Weather (server-side via the cached proxy — no key in the browser).
   //    Only fetch if the jump has GPS coords + timestamp.
