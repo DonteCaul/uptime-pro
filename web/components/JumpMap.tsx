@@ -60,8 +60,8 @@ export default function JumpMap({ jumps, theme }: JumpMapProps) {
         container: containerRef.current,
         style:
           theme === "dark"
-            ? "mapbox://styles/mapbox/dark-v11"
-            : "mapbox://styles/mapbox/streets-v12",
+            ? "mapbox://styles/mapbox/satellite-streets-v12"
+            : "mapbox://styles/mapbox/satellite-streets-v12",
         center: [0, 20],
         zoom: 1.5,
       });
