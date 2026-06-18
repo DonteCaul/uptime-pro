@@ -27,8 +27,8 @@ interface Profile {
   bio: string | null;
   avatar_url: string | null;
   home_dz: string | null;
-  home_dz_lat: string | null;
-  home_dz_lon: string | null;
+  home_dz_lat: number | null;
+  home_dz_lon: number | null;
   uspa_license: string | null;
   uspa_member_number: string | null;
   burble_name: string | null;
@@ -184,7 +184,9 @@ export function ProfileEditForm({
     e.preventDefault();
     setSaved(false);
     setError(null);
-    setResolvingDz(true);
+
+    const hasDzAddress = homeDzAddress.trim().length > 0;
+    if (hasDzAddress) setResolvingDz(true);
 
     try {
       const body: ProfileUpdate = {};
@@ -207,13 +209,19 @@ export function ProfileEditForm({
       body.is_public = form.is_public;
 
       // Resolve home DZ from the address field (if provided).
-      if (homeDzAddress.trim()) {
+      if (hasDzAddress) {
         const result = await resolveHomeDz(homeDzAddress);
         if (result) {
           body.home_dz = result.name;
           body.home_dz_lat = result.lat;
           body.home_dz_lon = result.lon;
           setResolvedDz(result.name);
+        } else {
+          setError(
+            "Could not resolve that address to a location. Try a more specific address.",
+          );
+          setResolvingDz(false);
+          return;
         }
       }
 
