@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useTransition, useEffect } from "react";
-import { Camera, Check, Link2, Loader2, Moon, Sun, Unlink2, Wifi } from "lucide-react";
+import { Camera, Check, Link2, Loader2, Moon, Sun, Trash2, Unlink2, Wifi } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -312,6 +312,45 @@ function LinkedAccountsCard() {
               Link
             </Button>
           )}
+        </div>
+
+        <Separator />
+
+        {/* Data Deletion */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-sm text-foreground">Delete My Data</Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Permanently delete your account and all data
+            </p>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            disabled={action === "deleting"}
+            onClick={async () => {
+              if (!confirm("This will permanently delete your account, all jump data, telemetry, and profile. This cannot be undone. Are you sure?")) return;
+              setAction("deleting");
+              try {
+                const res = await fetch("/api/data-deletion", { method: "POST" });
+                if (res.ok) {
+                  window.location.href = "/login?deleted=true";
+                } else {
+                  alert("Failed to delete account. Please contact support@uptime.pro");
+                }
+              } catch {
+                alert("Failed to delete account. Please contact support@uptime.pro");
+              }
+              setAction(null);
+            }}
+          >
+            {action === "deleting" ? (
+              <Loader2 size={14} className="animate-spin mr-1" />
+            ) : (
+              <Trash2 size={14} className="mr-1" />
+            )}
+            Delete
+          </Button>
         </div>
       </CardContent>
     </Card>
