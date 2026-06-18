@@ -37,8 +37,8 @@ sql_paths = ["./seed.sql"]
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+site_url = "https://next.uptime.pro"
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "https://next.uptime.pro/auth/callback"]
 jwt_expiry = 2592000   # 30 days, matching the old app
 enable_signup = true
 enable_anonymous_sign_ins = false
