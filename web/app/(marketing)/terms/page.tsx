@@ -4,7 +4,7 @@ export default function TermsPage() {
   return (
     <article className="prose prose-sm dark:prose-invert max-w-none">
       <h1>Terms of Service</h1>
-      <p className="text-muted-foreground">Last updated: {new Date().getFullYear()}</p>
+      <p className="text-muted-foreground">Last updated: June 17, 2026</p>
 
       <h2>Acceptance</h2>
       <p>
@@ -57,8 +57,11 @@ export default function TermsPage() {
 
       <h2>Contact</h2>
       <p>
-        Questions about these terms? Reach out via the support channels listed
-        in your account settings.
+        Questions about these terms? Contact us at{" "}
+        <a href="mailto:support@uptime.pro" className="text-primary">
+          support@uptime.pro
+        </a>
+        .
       </p>
     </article>
   );
