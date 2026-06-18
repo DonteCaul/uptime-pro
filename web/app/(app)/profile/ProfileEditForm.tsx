@@ -92,6 +92,55 @@ function Field({
   );
 }
 
+/** Countdown badge for reserve repack — 180-day window, green→red heat gradient. */
+function RepackCountdown({ date }: { date: string }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  // Tick every minute so the badge updates if left open.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const repackDate = new Date(date + "T00:00:00").getTime();
+  const deadline = repackDate + 180 * 24 * 60 * 60 * 1000; // 180 days
+  const remainingMs = deadline - now;
+  const remaining = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
+  const ratio = Math.min(1, Math.max(0, remainingMs / (180 * 24 * 60 * 60 * 1000)));
+
+  // Overdue → red pulse, otherwise interpolate green→yellow→red.
+  const isOverdue = remaining === 0;
+  let bg: string;
+  let text: string;
+  if (isOverdue) {
+    bg = "bg-red-500/20 border-red-500/40";
+    text = "text-red-500";
+  } else if (ratio > 0.5) {
+    // Green zone — fade toward yellow.
+    const t = (ratio - 0.5) / 0.5; // 1 = full green, 0 = yellow
+    const r = Math.round(234 - t * 198); // 234 → 34
+    const g = Math.round(179 + t * 33); // 179 → 197
+    bg = `rgba(${r}, ${g}, 8, 0.15)`;
+    text = `rgb(${r}, ${g}, 8)`;
+  } else {
+    // Yellow→Red zone.
+    const t = ratio / 0.5; // 1 = yellow, 0 = red
+    const r = Math.round(239 - t * 5); // 239 → 234
+    const g = Math.round(68 + t * 111); // 68 → 179
+    bg = `rgba(${r}, ${g}, 8, 0.2)`;
+    text = `rgb(${r}, ${g}, 8)`;
+  }
+
+  return (
+    <span
+      className="shrink-0 inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold tabular-nums"
+      style={{ backgroundColor: bg, color: text, borderColor: text.replace("rgb", "rgba").replace(")", ", 0.3)") }}
+    >
+      {isOverdue ? "⚠ Overdue" : `${remaining}d`}
+    </span>
+  );
+}
+
 export function ProfileEditForm({
   initialProfile,
 }: {
@@ -456,11 +505,16 @@ export function ProfileEditForm({
           <Separator />
 
           <Field label="Reserve Repack Date">
-            <Input
-              type="date"
-              value={form.reserve_repack_date}
-              onChange={(e) => update("reserve_repack_date", e.target.value)}
-            />
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <Input
+                  type="date"
+                  value={form.reserve_repack_date}
+                  onChange={(e) => update("reserve_repack_date", e.target.value)}
+                />
+              </div>
+              {form.reserve_repack_date && <RepackCountdown date={form.reserve_repack_date} />}
+            </div>
           </Field>
         </CardContent>
       </Card>
