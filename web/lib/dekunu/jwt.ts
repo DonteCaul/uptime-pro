@@ -20,58 +20,6 @@ function secret(): string {
   return s;
 }
 
-// ---------------------------------------------------------------------------
-// Dekunu compat feature flag — cached from app_settings table.
-// ---------------------------------------------------------------------------
-let _compatCache: { enabled: boolean; fetchedAt: number } | null = null;
-const COMPAT_TTL_MS = 30_000; // refresh every 30 seconds
-
-/**
- * Fetch the current `dekunu_compat` setting from app_settings. Results are
- * cached for 30 seconds to avoid hammering Supabase on every /v1 request.
- */
-async function fetchCompatFlag(): Promise<boolean> {
-  try {
-    const admin = createAdminClient();
-    const { data } = await admin
-      .from("app_settings")
-      .select("value")
-      .eq("key", "dekunu_compat")
-      .maybeSingle();
-    return data?.value === "true";
-  } catch {
-    // If the table doesn't exist yet or the query fails, fall back to env var.
-    return process.env.DEKUNU_COMPAT === "true";
-  }
-}
-
-/**
- * Invalidate the compat cache (called after admin toggles the setting).
- */
-export async function invalidateCompatCache(): Promise<void> {
-  _compatCache = null;
-}
-
-/**
- * Feature-flag guard. Every /v1 route handler calls this first and returns 404
- * if compat is disabled. Synchronous — reads from a 30-second TTL cache so we
- * don't need to change all route handlers to async for this check.
- *
- * Falls back to the DEKUNU_COMPAT env var if the app_settings table is missing.
- */
-export function isDekunuCompatEnabled(): boolean {
-  if (_compatCache && Date.now() - _compatCache.fetchedAt < COMPAT_TTL_MS) {
-    return _compatCache.enabled;
-  }
-  // Fire-and-forget refresh — return current cached value (or fallback).
-  // The next request after the cache populates will pick up the new value.
-  void fetchCompatFlag().then((enabled) => {
-    _compatCache = { enabled, fetchedAt: Date.now() };
-  });
-  // While the cache is cold, fall back to the last known value or env var.
-  return _compatCache?.enabled ?? process.env.DEKUNU_COMPAT === "true";
-}
-
 export interface DekunuTokenPayload {
   userId: number;
   deviceId: number;
@@ -113,4 +61,13 @@ export async function findUserByDekunuId(
     fullName: data.full_name as string | null,
     email: data.email as string | null,
   };
+}
+
+/**
+ * Feature-flag guard. Every /v1 route handler calls this first and returns 404
+ * if compat is disabled. Read from env per-request (no global state — safe for
+ * serverless).
+ */
+export function isDekunuCompatEnabled(): boolean {
+  return process.env.DEKUNU_COMPAT === "true";
 }

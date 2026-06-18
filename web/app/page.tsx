@@ -23,7 +23,7 @@ const FEATURES = [
   {
     icon: PlaneTakeoff,
     title: "Auto-Ingest",
-    desc: "Upload your CSVs and let the system handle parsing, dedupe, and archival automatically.",
+    desc: "Drop your Dekunu CSVs — or let your device sync automatically. Parsing, dedupe, and archival handled.",
   },
   {
     icon: Map,
@@ -111,8 +111,8 @@ export default async function LandingPage() {
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             UpTime.Pro is a modern jump logbook with 3D replay, telemetry
-            analysis, and community leaderboards. Upload manually and
-            relive every jump.
+            analysis, and community leaderboards. Sync from your Dekunu device
+            or upload manually.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             {user ? (

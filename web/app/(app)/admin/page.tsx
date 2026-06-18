@@ -2,8 +2,6 @@ import Link from "next/link";
 import { createServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlushCacheButton } from "./FlushCacheButton";
-import { DekunuCompatToggle } from "./DekunuCompatToggle";
-import { getDekunuCompat } from "@/lib/actions/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +9,6 @@ export const metadata = { title: "Admin · UpTime.Pro" };
 
 export default async function AdminOverviewPage() {
   const supabase = await createServerClient();
-
-  // Fetch Dekunu compat setting.
-  const dekunuCompat = await getDekunuCompat();
 
   // Counts — admin RLS policies allow reading everything.
   const [usersRes, jumpsRes, devicesRes, logsRes] = await Promise.all([
@@ -66,16 +61,6 @@ export default async function AdminOverviewPage() {
           );
         })}
       </div>
-
-      {/* Dekunu device compat */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Device Integrations</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <DekunuCompatToggle initial={dekunuCompat} />
-        </CardContent>
-      </Card>
 
       {/* Cache management */}
       <Card>
