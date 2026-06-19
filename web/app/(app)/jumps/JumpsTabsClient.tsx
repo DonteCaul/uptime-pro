@@ -403,7 +403,7 @@ export function JumpsTabsClient({
     return (
       <div
         className="-mx-4 -mb-4 overflow-hidden"
-        style={{ height: "calc((100vh - 60px) * 1.5)" }}
+        style={{ height: "calc(100vh - 100px)" }}
       >
         <JumpMap jumps={allJumps} theme="light" />
       </div>
