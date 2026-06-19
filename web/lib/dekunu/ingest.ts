@@ -1,5 +1,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { parseJumpCSV, parseFilename, type JumpMeta } from "@/lib/csvParser";
+import {
+  parseJumpCSV,
+  parseSummaryJSON,
+  parseFilename,
+  type JumpMeta,
+} from "@/lib/csvParser";
 import type { Database } from "@/lib/db/types";
 
 /**
@@ -9,22 +14,19 @@ import type { Database } from "@/lib/db/types";
  *
  * For a single uploaded file:
  *   1. Parse the CSV buffer → { meta, rows }
- *   2. Extract device + action type from the filename
- *   3. Upsert the device record (links to the uploading user)
- *   4. Dedupe by (user_id, filename) → skip if already imported
- *   5. Insert the jump row
- *   6. Bulk-insert sensor rows in batches of 200 (the hot path)
- *   7. Upload the raw CSV to Storage for archival
+ *   2. If a summary JSON is provided, parse it and use its meta (more accurate)
+ *   3. Extract device + action type from the filename
+ *   4. Upsert the device record (links to the uploading user)
+ *   5. Dedupe by (user_id, filename) → skip if already imported
+ *   6. Read + assign jump_number from profiles.next_jump_number
+ *   7. Insert the jump row
+ *   8. Bulk-insert sensor rows in batches of 200 (the hot path)
+ *   9. Compute analysis summary RPC
+ *   10. Archive the raw CSV to Storage for archival
  *
  * Uses the service-role admin client (bypasses RLS) and explicitly scopes every
  * query by userId — RLS would block the bulk telemetry insert since it crosses
  * the jump_data_points → jump ownership join per-row.
- *
- * NOTE: the original Express app wrapped each file in a Postgres transaction
- * (BEGIN/COMMIT/ROLLBACK). The Supabase JS client doesn't expose transaction
- * control, so a partial failure on the telemetry insert could leave an orphan
- * jump row. We mitigate by inserting the jump row only after parse succeeds,
- * and ON DELETE CASCADE on jump_data_points means deleting a jump cleans up.
  */
 
 export interface IngestResult {
@@ -47,21 +49,55 @@ const SENSOR_COLS = [
   "batt_perc", "pressure_pa_baro2", "temperature_c_baro2", "altitude_m_baro2",
 ] as const;
 
+/**
+ * Ingest a single jump file.
+ *
+ * When `summaryBuffer` is provided (manual upload with paired JSON),
+ * the summary's pre-computed values are used for jump metadata — this is
+ * significantly more accurate than deriving from raw CSV sensor data.
+ *
+ * When `summaryBuffer` is omitted (device WiFi sync), the CSV-only fallback
+ * is used with bug-fixed derivation logic.
+ */
 export async function ingestJumpFile(
   userId: string,
   filename: string,
   buffer: Buffer,
+  summaryBuffer?: Buffer,
 ): Promise<IngestResult> {
   try {
     const admin = createAdminClient();
 
-    // 1. Parse the CSV.
-    const { meta, rows } = parseJumpCSV(buffer);
+    // 1. Parse the CSV (always needed for sensor rows).
+    const { meta: csvMeta, rows } = parseJumpCSV(buffer);
 
-    // 2. Extract device + action type from filename.
-    const { deviceId, actionTypeId, discipline } = parseFilename(filename);
+    // 2. Use summary JSON for metadata if available, otherwise CSV fallback.
+    let meta: JumpMeta;
+    let summaryDiscipline: string | null = null;
+    let summaryJumpNumber: number | null = null;
 
-    // 3. Upsert device record if we have a deviceId.
+    if (summaryBuffer) {
+      try {
+        const json = JSON.parse(summaryBuffer.toString("utf-8"));
+        meta = parseSummaryJSON(json, rows.length);
+        summaryDiscipline = meta.discipline_from_summary ?? null;
+        summaryJumpNumber = meta.jump_number ?? null;
+      } catch {
+        // If JSON parse fails, fall back to CSV-derived meta.
+        console.warn(`[ingest] summary JSON parse failed for ${filename}, using CSV fallback`);
+        meta = csvMeta;
+      }
+    } else {
+      meta = csvMeta;
+    }
+
+    // 3. Extract device + action type from filename.
+    const { deviceId, actionTypeId, discipline: filenameDiscipline } = parseFilename(filename);
+
+    // Discipline priority: summary JSON > filename action type
+    const discipline = summaryDiscipline ?? filenameDiscipline;
+
+    // 4. Upsert device record if we have a deviceId.
     let dbDeviceId: number | null = null;
     if (deviceId) {
       const { data: dev, error: devErr } = await admin
@@ -80,7 +116,7 @@ export async function ingestJumpFile(
       dbDeviceId = dev?.id ?? null;
     }
 
-    // 4. Dedupe by (user_id, filename).
+    // 5. Dedupe by (user_id, filename).
     const { data: existing } = await admin
       .from("jumps")
       .select("id")
@@ -91,7 +127,26 @@ export async function ingestJumpFile(
       return { file: filename, status: "duplicate", jump_id: existing.id };
     }
 
-    // 5. Insert the jump row.
+    // 6. Assign jump_number from profile's next_jump_number counter.
+    // If the summary provides a customJumpNum, use that instead.
+    let jumpNumber: number | null = summaryJumpNumber;
+    if (jumpNumber == null) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("next_jump_number")
+        .eq("id", userId)
+        .single();
+      if (profile?.next_jump_number != null) {
+        jumpNumber = profile.next_jump_number as number;
+        // Increment the counter for the next jump.
+        await admin
+          .from("profiles")
+          .update({ next_jump_number: jumpNumber + 1 })
+          .eq("id", userId);
+      }
+    }
+
+    // 7. Insert the jump row.
     const { data: jumpRow, error: jumpErr } = await admin
       .from("jumps")
       .insert({
@@ -104,6 +159,7 @@ export async function ingestJumpFile(
         freefall_duration_s: meta.freefall_duration_s,
         max_freefall_speed_ms: meta.max_freefall_speed_ms,
         canopy_duration_s: meta.canopy_duration_s,
+        climb_duration_s: meta.climb_duration_s,
         exit_lat: meta.exit_lat,
         exit_lon: meta.exit_lon,
         landing_lat: meta.landing_lat,
@@ -113,6 +169,7 @@ export async function ingestJumpFile(
         row_count: meta.row_count,
         action_type_id: actionTypeId,
         discipline,
+        jump_number: jumpNumber,
         raw_file_storage_key: `${userId}/${filename}`,
       })
       .select("id")
@@ -122,7 +179,7 @@ export async function ingestJumpFile(
     }
     const jumpId = jumpRow.id;
 
-    // 6. Bulk-insert sensor rows in batches of 200.
+    // 8. Bulk-insert sensor rows in batches of 200.
     if (rows.length) {
       type JumpDataPointInsert =
         Database["public"]["Tables"]["jump_data_points"]["Insert"];
@@ -149,7 +206,7 @@ export async function ingestJumpFile(
       }
     }
 
-    // 7. Compute analysis summary from sensor data.
+    // 9. Compute analysis summary from sensor data.
     if (rows.length) {
       try {
         await admin.rpc("compute_jump_analysis", { jump_id: jumpId });
@@ -161,7 +218,7 @@ export async function ingestJumpFile(
       }
     }
 
-    // 8. Archive the raw CSV to Storage (best-effort — non-fatal if it fails).
+    // 10. Archive the raw CSV to Storage (best-effort — non-fatal if it fails).
     try {
       await admin.storage
         .from("jump-csv")

@@ -200,6 +200,7 @@ export type Database = {
         Row: {
           action_type_id: number | null
           canopy_duration_s: number | null
+          climb_duration_s: number | null
           created_at: string
           deployment_altitude_m: number | null
           device_id: number | null
@@ -233,6 +234,7 @@ export type Database = {
         Insert: {
           action_type_id?: number | null
           canopy_duration_s?: number | null
+          climb_duration_s?: number | null
           created_at?: string
           deployment_altitude_m?: number | null
           device_id?: number | null
@@ -266,6 +268,7 @@ export type Database = {
         Update: {
           action_type_id?: number | null
           canopy_duration_s?: number | null
+          climb_duration_s?: number | null
           created_at?: string
           deployment_altitude_m?: number | null
           device_id?: number | null

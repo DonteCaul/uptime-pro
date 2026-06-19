@@ -16,6 +16,8 @@ interface JumpDetail {
   freefall_duration_s: number | null;
   max_freefall_speed_ms: number | null;
   canopy_duration_s: number | null;
+  climb_duration_s: number | null;
+  jump_number: number | null;
   exit_lat: number | null;
   exit_lon: number | null;
   notes: string | null;
@@ -53,7 +55,7 @@ async function getJumpWithNeighbors(
   const { data: allJumps } = await supabase
     .from("jumps")
     .select(
-      "id, filename, jumped_at, exit_altitude_m, deployment_altitude_m, freefall_duration_s, max_freefall_speed_ms, canopy_duration_s, exit_lat, exit_lon, notes, discipline, is_public, row_count",
+      "id, filename, jumped_at, exit_altitude_m, deployment_altitude_m, freefall_duration_s, max_freefall_speed_ms, canopy_duration_s, climb_duration_s, jump_number, exit_lat, exit_lon, notes, discipline, is_public, row_count",
     )
     .order("jumped_at", { ascending: false, nullsFirst: false });
 

@@ -3,14 +3,19 @@ import { createServerClient } from "@/lib/supabase/server";
 import { ingestJumpFile, type IngestResult } from "@/lib/dekunu/ingest";
 
 /**
- * CSV upload endpoint — accepts one .csv file per request.
+ * CSV + JSON summary upload endpoint — accepts one jump pair per request.
  *
- * The client uploads files sequentially (one per request) so each file gets
- * its own response immediately — no timeout risk from batching 50 files.
+ * The client uploads files via a worker pool (3 concurrent) so each request
+ * processes exactly one jump and returns immediately.
  *
- * Accepts multipart/form-data with a `file` field. Returns 207 multi-status:
+ * Accepts multipart/form-data with:
+ *   - `file` (required): the .csv action log
+ *   - `summary` (optional): the matching .json summary
  *
- *   { results: [{ file, status, ... }] }
+ * When both are provided, the summary's device-calculated values are used
+ * for jump metadata (more accurate). The CSV is used for raw sensor rows.
+ *
+ * Returns 207 multi-status: { results: [{ file, status, ... }] }
  */
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
@@ -32,7 +37,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
   }
 
-  // Accept either `file` (single-file) or `files[]` (legacy multi-file) key.
   const file = (formData.get("file") ?? formData.getAll("files[]")[0]) as
     | File
     | null;
@@ -58,11 +62,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 3. Read file into memory and run the ingest pipeline.
+  // 3. Read CSV into memory.
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
-  const result: IngestResult = await ingestJumpFile(user.id, file.name, buffer);
+  // 4. Optionally read the paired summary JSON.
+  const summaryField = formData.get("summary");
+  let summaryBuffer: Buffer | undefined;
+  if (summaryField instanceof File) {
+    summaryBuffer = Buffer.from(await summaryField.arrayBuffer());
+  }
+
+  // 5. Run the ingest pipeline.
+  const result: IngestResult = await ingestJumpFile(
+    user.id,
+    file.name,
+    buffer,
+    summaryBuffer,
+  );
 
   return NextResponse.json({ results: [result] }, { status: 207 });
 }

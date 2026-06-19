@@ -63,6 +63,8 @@ interface JumpDetail {
   freefall_duration_s: number | null;
   max_freefall_speed_ms: number | null;
   canopy_duration_s: number | null;
+  climb_duration_s: number | null;
+  jump_number: number | null;
   exit_lat: number | null;
   exit_lon: number | null;
   notes: string | null;
@@ -657,7 +659,7 @@ export function JumpDetailClient({
         </button>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-foreground truncate">
-            {date || jump.filename}
+            {jump.jump_number != null ? `#${jump.jump_number}` : ""}{jump.jump_number != null && date ? " " : ""}{date || jump.filename}
           </p>
           <p className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">
             {jump.filename}
@@ -713,6 +715,13 @@ export function JumpDetailClient({
           value={fmtDuration(jump.canopy_duration_s)}
           accent="#3399ff"
         />
+        {jump.climb_duration_s != null && (
+          <StatChip
+            label="Climb"
+            value={fmtDuration(jump.climb_duration_s)}
+            accent="#888888"
+          />
+        )}
         {analysis?.avgGlide != null && (
           <StatChip
             label="Glide"

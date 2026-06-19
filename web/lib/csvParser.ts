@@ -3,16 +3,18 @@ import { parse } from "csv-parse/sync";
 /**
  * Parse a UpTime.Pro jump log CSV buffer.
  *
- * Faithful port of backend/src/utils/csvParser.js. Returns { meta, rows } where
- * `meta` is the aggregated jump summary and `rows` are the per-sample sensor
- * points ready for bulk insert.
+ * Returns { meta, rows } where `meta` is the aggregated jump summary and
+ * `rows` are the per-sample sensor points ready for bulk insert.
+ *
+ * This is the CSV-only fallback path used when no summary JSON is available
+ * (e.g. device WiFi sync). When a summary JSON IS available, prefer
+ * parseSummaryJSON() for meta accuracy — the CSV bugs below only affect
+ * this fallback.
  *
  * UpTime.Pro firmware quirks preserved:
  *  - `<` / `>` overflow markers (e.g. "<0.07") are stripped before numeric cast
  *  - gpsLat/gpsLon are stored ×1e6 in the CSV; divided out here
  *  - DeviceMode: 2=climb, 3=freefall, 4=canopy, 5=ground
- *  - Max freefall speed uses the 90th percentile to reject the deployment
- *    pressure transient (a raw-max picks up the canopy-opening spike)
  */
 
 export interface JumpMeta {
@@ -22,6 +24,7 @@ export interface JumpMeta {
   freefall_duration_s: number | null;
   max_freefall_speed_ms: number;
   canopy_duration_s: number | null;
+  climb_duration_s: number | null;
   exit_lat: number | null;
   exit_lon: number | null;
   landing_lat: number | null;
@@ -29,6 +32,9 @@ export interface JumpMeta {
   dz_lat: number | null;
   dz_lon: number | null;
   row_count: number;
+  // Fields populated from summary JSON only (not derivable from CSV).
+  jump_number?: number;
+  discipline_from_summary?: string;
 }
 
 export interface SensorRow {
@@ -89,6 +95,8 @@ interface ParsedRecord {
   altitudeMetersBaro2: number | null;
 }
 
+// ─── CSV-only parser (fallback when no summary JSON is available) ────────────
+
 export function parseJumpCSV(buffer: Buffer | string): {
   meta: JumpMeta;
   rows: SensorRow[];
@@ -116,6 +124,7 @@ export function parseJumpCSV(buffer: Buffer | string): {
         freefall_duration_s: null,
         max_freefall_speed_ms: 0,
         canopy_duration_s: null,
+        climb_duration_s: null,
         exit_lat: null,
         exit_lon: null,
         landing_lat: null,
@@ -131,17 +140,61 @@ export function parseJumpCSV(buffer: Buffer | string): {
   const first = records[0];
   const last = records[records.length - 1];
 
-  // Determine max altitude (exit point) over whole flight.
-  let maxAlt = 0;
-  let exitRow = first;
-  for (const r of records) {
-    if ((r.altitudeMeters ?? 0) > maxAlt) {
-      maxAlt = r.altitudeMeters ?? 0;
-      exitRow = r;
+  // Phase detection via DeviceMode transitions.
+  let climbStartIdx: number | null = null;  // first Mode-2 row
+  let freefallStartIdx: number | null = null;
+  let freefallEndIdx: number | null = null;
+  let canopyEndIdx: number | null = null;
+
+  for (let i = 0; i < records.length; i++) {
+    const mode = records[i].DeviceMode;
+    if (mode === 2 && climbStartIdx === null) climbStartIdx = i;
+    if (mode === 3 && freefallStartIdx === null) freefallStartIdx = i;
+    if (freefallStartIdx !== null && mode !== 3 && freefallEndIdx === null) {
+      freefallEndIdx = i;
+    }
+    // BUG FIX #4: Lock canopy end on first Mode-5 transition instead of
+    // overwriting on every Mode-4 row.
+    if (freefallEndIdx !== null && mode === 5 && canopyEndIdx === null) {
+      canopyEndIdx = i;
+    }
+  }
+  // Fallback: if no Mode-5 detected, canopy end is the last row.
+  if (freefallEndIdx !== null && canopyEndIdx === null) {
+    canopyEndIdx = records.length - 1;
+  }
+
+  // BUG FIX #1: Exit altitude = altitude at first Mode-3 row, NOT the global
+  // barometric max. The global max reads ~107m too high on average due to
+  // barometric lag during the climb-to-exit transition.
+  const exitAlt = freefallStartIdx !== null
+    ? (records[freefallStartIdx].altitudeMeters ?? 0)
+    : 0;
+
+  // BUG FIX #2: Deployment altitude = altitude ~300 rows (~1.2s at 240Hz)
+  // after the mode transition. The transition row reads ~98m too low due to
+  // the opening shock pressure transient.
+  const DEPLOY_STABILIZE_ROWS = 300;
+  const deployIdx = freefallEndIdx !== null
+    ? Math.min(freefallEndIdx + DEPLOY_STABILIZE_ROWS, records.length - 1)
+    : null;
+  const deployAlt = deployIdx !== null
+    ? (records[deployIdx].altitudeMeters ?? null)
+    : null;
+
+  // Exit coordinates: GPS at the exit row (first Mode-3).
+  const exitRow = freefallStartIdx !== null ? records[freefallStartIdx] : first;
+
+  // Landing coordinates: last row with valid GPS (not necessarily the very last row).
+  let landingRow = last;
+  for (let i = records.length - 1; i >= 0; i--) {
+    if (records[i].gpsLatitude && records[i].gpsLongitude) {
+      landingRow = records[i];
+      break;
     }
   }
 
-  // First valid GPS fix during the climb phase (DeviceMode=2) = DZ location.
+  // First valid GPS fix during climb phase = DZ location.
   let dzRow: ParsedRecord | null = null;
   for (const r of records) {
     if (r.DeviceMode === 2 && r.gpsLatitude && r.gpsLongitude) {
@@ -149,7 +202,6 @@ export function parseJumpCSV(buffer: Buffer | string): {
       break;
     }
   }
-  // Fall back to first record with valid GPS.
   if (!dzRow) {
     for (const r of records) {
       if (r.gpsLatitude && r.gpsLongitude) {
@@ -159,66 +211,59 @@ export function parseJumpCSV(buffer: Buffer | string): {
     }
   }
 
-  // gpsTime is already a Unix timestamp (seconds since 1970-01-01).
+  // Jumped-at timestamp from GPS wall clock (first row).
   const jumpedAt = first.gpsTime
     ? new Date(first.gpsTime * 1000).toISOString()
     : null;
 
-  // Phase detection via DeviceMode transitions.
-  let freefallStartIdx: number | null = null;
-  let freefallEndIdx: number | null = null;
-  let canopyEndIdx: number | null = null;
-  let deployAlt: number | null = null;
+  // BUG FIX #3: Durations use gpsTime (Unix seconds, wall clock) instead of
+  // Timestamp (ms since boot, drifts ~+5s on freefall).
+  const freefallDuration =
+    freefallStartIdx !== null && freefallEndIdx !== null
+      ? (records[freefallEndIdx].gpsTime ?? 0) -
+        (records[freefallStartIdx].gpsTime ?? 0)
+      : null;
 
-  for (let i = 0; i < records.length; i++) {
-    const mode = records[i].DeviceMode;
-    if (mode === 3 && freefallStartIdx === null) freefallStartIdx = i;
-    if (freefallStartIdx !== null && mode !== 3 && freefallEndIdx === null) {
-      freefallEndIdx = i;
-      deployAlt = records[i].altitudeMeters;
-    }
-    if (freefallEndIdx !== null && mode === 4) canopyEndIdx = i;
-  }
+  const canopyDuration =
+    freefallEndIdx !== null && canopyEndIdx !== null
+      ? (records[canopyEndIdx].gpsTime ?? 0) -
+        (records[freefallEndIdx].gpsTime ?? 0)
+      : null;
 
-  // Max speed during freefall using 90th percentile (rejects deployment spike).
+  const climbDuration =
+    climbStartIdx !== null && freefallStartIdx !== null
+      ? (records[freefallStartIdx].gpsTime ?? 0) -
+        (records[climbStartIdx].gpsTime ?? 0)
+      : null;
+
+  // BUG FIX #5: Max freefall speed = true max excluding first and last 2 rows
+  // of freefall (straddle mode transition transients). The 90th-percentile
+  // workaround undershoots on short freefalls (hop & pop).
   let maxSpeed = 0;
   if (freefallStartIdx !== null) {
     const end = freefallEndIdx ?? records.length - 1;
-    const speeds: number[] = [];
-    for (let i = freefallStartIdx; i <= end; i++) {
+    const trimmedStart = Math.min(freefallStartIdx + 2, end);
+    const trimmedEnd = Math.max(end - 2, trimmedStart);
+    for (let i = trimmedStart; i <= trimmedEnd; i++) {
       const v = records[i].instVertSpeedMetersPerSec;
-      if (v != null && isFinite(v)) speeds.push(Math.abs(v));
-    }
-    if (speeds.length) {
-      speeds.sort((a, b) => a - b);
-      maxSpeed = speeds[Math.floor(speeds.length * 0.9)] ?? 0;
+      if (v != null && isFinite(v) && Math.abs(v) > maxSpeed) {
+        maxSpeed = Math.abs(v);
+      }
     }
   }
 
-  const freefallDuration =
-    freefallStartIdx !== null && freefallEndIdx !== null
-      ? ((records[freefallEndIdx].Timestamp ?? 0) -
-          (records[freefallStartIdx].Timestamp ?? 0)) /
-        1000
-      : null;
-  const canopyDuration =
-    freefallEndIdx !== null && canopyEndIdx !== null
-      ? ((records[canopyEndIdx].Timestamp ?? 0) -
-          (records[freefallEndIdx].Timestamp ?? 0)) /
-        1000
-      : null;
-
   const meta: JumpMeta = {
     jumped_at: jumpedAt,
-    exit_altitude_m: maxAlt,
+    exit_altitude_m: exitAlt,
     deployment_altitude_m: deployAlt,
     freefall_duration_s: freefallDuration,
     max_freefall_speed_ms: maxSpeed,
     canopy_duration_s: canopyDuration,
+    climb_duration_s: climbDuration,
     exit_lat: exitRow.gpsLatitude ? exitRow.gpsLatitude / 1e6 : null,
     exit_lon: exitRow.gpsLongitude ? exitRow.gpsLongitude / 1e6 : null,
-    landing_lat: last.gpsLatitude ? last.gpsLatitude / 1e6 : null,
-    landing_lon: last.gpsLongitude ? last.gpsLongitude / 1e6 : null,
+    landing_lat: landingRow.gpsLatitude ? landingRow.gpsLatitude / 1e6 : null,
+    landing_lon: landingRow.gpsLongitude ? landingRow.gpsLongitude / 1e6 : null,
     dz_lat: dzRow ? dzRow.gpsLatitude! / 1e6 : null,
     dz_lon: dzRow ? dzRow.gpsLongitude! / 1e6 : null,
     row_count: records.length,
@@ -256,7 +301,98 @@ export function parseJumpCSV(buffer: Buffer | string): {
   return { meta, rows };
 }
 
-// ─── Filename parsing ───────────────────────────────────────────────────────
+// ─── Summary JSON parser (device-calculated, most accurate) ───────────────────
+
+/**
+ * Parse a Dekunu summary JSON object into a JumpMeta.
+ *
+ * The device generates this immediately after landing from the CSV data,
+ * using firmware-level calculations that correct for barometric lag,
+ * pressure transients, and Timestamp drift. Always prefer this over
+ * the CSV-derived fallback when available.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function parseSummaryJSON(json: any, rowCount: number): JumpMeta {
+  const m = json.moments ?? {};
+
+  return {
+    jumped_at: isoOrNone(m.takeoff?.time),
+    exit_altitude_m: num(m.exit?.altitudeM) ?? 0,
+    deployment_altitude_m: num(m.deployment?.altitudeM),
+    freefall_duration_s: timeDiff(m.exit?.time, m.deployment?.time),
+    max_freefall_speed_ms: Math.abs(num(m.freefall?.speed?.maxVert) ?? 0),
+    canopy_duration_s: timeDiff(m.deployment?.time, m.landing?.time),
+    climb_duration_s: timeDiff(m.takeoff?.time, m.exit?.time),
+    exit_lat: parseFloatOrNull(m.exit?.lat),
+    exit_lon: parseFloatOrNull(m.exit?.lon),
+    landing_lat: parseFloatOrNull(m.landing?.lat),
+    landing_lon: parseFloatOrNull(m.landing?.lon),
+    dz_lat: parseFloatOrNull(m.takeoff?.lat),
+    dz_lon: parseFloatOrNull(m.takeoff?.lon),
+    row_count: rowCount,
+  jump_number: num(json.customJumpNum) ?? undefined,
+  discipline_from_summary: disciplineFromTypeId(json.disciplineTypeId) ?? undefined,
+  };
+}
+
+function timeDiff(a?: string, b?: string): number | null {
+  if (!a || !b) return null;
+  const msA = Date.parse(a);
+  const msB = Date.parse(b);
+  if (isNaN(msA) || isNaN(msB)) return null;
+  return (msB - msA) / 1000;
+}
+
+function isoOrNone(v: unknown): string | null {
+  if (!v || typeof v !== "string") return null;
+  const d = Date.parse(v);
+  return isNaN(d) ? null : new Date(d).toISOString();
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function num(v: any): number | null {
+  if (v == null) return null;
+  const n = typeof v === "number" ? v : parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+function parseFloatOrNull(v: unknown): number | null {
+  if (!v || typeof v !== "string") return null;
+  const n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Map Dekunu disciplineTypeId to a discipline string.
+ * Falls back to null for unknown IDs.
+ */
+function disciplineFromTypeId(id: unknown): string | null {
+  if (id == null) return null;
+  const n = typeof id === "number" ? id : parseInt(id as string, 10);
+  if (isNaN(n)) return null;
+  const map: Record<number, string> = {
+    1: "Belly / RW",
+    2: "Freefly",
+    3: "Wingsuit",
+    4: "Tracking",
+    5: "Angle",
+    6: "Sit Flying",
+    7: "Head Down",
+    8: "Canopy Piloting / Swooping",
+    9: "Tandem",
+    10: "AFF / Student",
+    11: "HALO / HAHO",
+    12: "BASE",
+    13: "Hop & Pop",
+    14: "Demo",
+    15: "Paragliding",
+    16: "Rode the plane down",
+    17: "Other",
+  };
+  return map[n] ?? null;
+}
+
+// ─── Filename parsing ─────────────────────────────────────────────────────────
 // Dekunu filenames: action_<deviceId>_<YYYYMMDD>_<HHMM>-<actionTypeId>.csv
 
 export interface ParsedFilename {
@@ -265,7 +401,7 @@ export interface ParsedFilename {
   discipline: string | null;
 }
 
-// Map Dekunu action type IDs to discipline strings (matches original).
+// Map Dekunu action type IDs to discipline strings (CSV filename fallback).
 const ACTION_TYPE_DISCIPLINE: Record<number, string> = {
   240: "Belly / RW",
   300: "Hop & Pop",
