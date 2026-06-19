@@ -133,3 +133,9 @@
 .uptime-switch[data-state="checked"] {
   background-color: hsl(var(--primary));
 }
+
+/* Hide Mapbox logo & attribution on jump detail maps */
+.mapbox-no-logo .mapboxgl-ctrl-logo,
+.mapbox-no-logo .mapboxgl-ctrl-attrib {
+  display: none !important;
+}

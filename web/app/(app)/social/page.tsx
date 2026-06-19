@@ -63,7 +63,34 @@ async function fetchAllPeriods(): Promise<Record<string, LeaderboardData>> {
   return Object.fromEntries(entries);
 }
 
+// Fetch community-wide aggregate stats for the ticker at the bottom of the page.
+async function fetchCommunityStats(): Promise<{
+  users: number;
+  jumps: number;
+  total_ft: number;
+  freefall_hrs: number;
+  dropzones: number;
+}> {
+  const supabase = await createServerClient();
+  const { data, error } = await supabase.rpc("community_stats");
+  if (error || !data) {
+    console.warn(`[social] community_stats failed: ${error?.message}`);
+    return { users: 0, jumps: 0, total_ft: 0, freefall_hrs: 0, dropzones: 0 };
+  }
+  const raw = data as Record<string, unknown>;
+  return {
+    users: Number(raw.users ?? 0),
+    jumps: Number(raw.jumps ?? 0),
+    total_ft: Number(raw.total_ft ?? 0),
+    freefall_hrs: Number(raw.freefall_hrs ?? 0),
+    dropzones: Number(raw.dropzones ?? 0),
+  };
+}
+
 export default async function SocialPage() {
-  const dataByPeriod = await fetchAllPeriods();
-  return <SocialClient dataByPeriod={dataByPeriod} />;
+  const [dataByPeriod, communityStats] = await Promise.all([
+    fetchAllPeriods(),
+    fetchCommunityStats(),
+  ]);
+  return <SocialClient dataByPeriod={dataByPeriod} communityStats={communityStats} />;
 }

@@ -734,7 +734,7 @@ export function JumpDetailClient({
         className="relative mx-4 rounded-lg overflow-hidden border border-border"
         style={{ height: 280 }}
       >
-        <div ref={mapContainerRef} style={{ width: "100%", height: "100%" }} />
+        <div ref={mapContainerRef} className="mapbox-no-logo" style={{ width: "100%", height: "100%" }} />
 
         {mapReady && (
           <div

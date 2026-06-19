@@ -94,11 +94,11 @@ function Field({
   );
 }
 
-/** Countdown badge for reserve repack — 180-day window, green→red heat gradient. */
+/** Circular countdown ring for reserve repack — 180-day window, green→red gradient. */
 function RepackCountdown({ date }: { date: string }) {
   const [now, setNow] = useState(() => Date.now());
 
-  // Tick every minute so the badge updates if left open.
+  // Tick every minute so the ring updates if left open.
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
@@ -109,37 +109,68 @@ function RepackCountdown({ date }: { date: string }) {
   const remainingMs = deadline - now;
   const remaining = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
   const ratio = Math.min(1, Math.max(0, remainingMs / (180 * 24 * 60 * 60 * 1000)));
-
-  // Overdue → red pulse, otherwise interpolate green→yellow→red.
   const isOverdue = remaining === 0;
-  let bg: string;
-  let text: string;
+
+  // Ring geometry — radius 16, circumference ≈ 100.53
+  const radius = 16;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - ratio); // how much stroke to hide
+
+  // Interpolate color: green (full) → yellow (mid) → red (empty).
+  let strokeColor: string;
   if (isOverdue) {
-    bg = "bg-red-500/20 border-red-500/40";
-    text = "text-red-500";
+    strokeColor = "#ef4444"; // red-500
   } else if (ratio > 0.5) {
-    // Green zone — fade toward yellow.
-    const t = (ratio - 0.5) / 0.5; // 1 = full green, 0 = yellow
-    const r = Math.round(234 - t * 198); // 234 → 34
-    const g = Math.round(179 + t * 33); // 179 → 197
-    bg = `rgba(${r}, ${g}, 8, 0.15)`;
-    text = `rgb(${r}, ${g}, 8)`;
+    const t = (ratio - 0.5) / 0.5; // 1 = green, 0 = yellow
+    const r = Math.round(234 - t * 198);
+    const g = Math.round(179 + t * 33);
+    strokeColor = `rgb(${r}, ${g}, 8)`;
   } else {
-    // Yellow→Red zone.
     const t = ratio / 0.5; // 1 = yellow, 0 = red
-    const r = Math.round(239 - t * 5); // 239 → 234
-    const g = Math.round(68 + t * 111); // 68 → 179
-    bg = `rgba(${r}, ${g}, 8, 0.2)`;
-    text = `rgb(${r}, ${g}, 8)`;
+    const r = Math.round(239 - t * 5);
+    const g = Math.round(68 + t * 111);
+    strokeColor = `rgb(${r}, ${g}, 8)`;
   }
 
   return (
-    <span
-      className="shrink-0 inline-flex items-center rounded-md border px-2 py-1 text-xs font-semibold tabular-nums"
-      style={{ backgroundColor: bg, color: text, borderColor: text.replace("rgb", "rgba").replace(")", ", 0.3)") }}
-    >
-      {isOverdue ? "⚠ Overdue" : `${remaining}d`}
-    </span>
+    <div className="shrink-0" title={isOverdue ? "Reserve repack overdue" : `${remaining} days remaining`}>
+      <svg width="40" height="40" viewBox="0 0 40 40" className="block">
+        {/* Background track */}
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          className="text-muted-foreground/20"
+        />
+        {/* Progress arc — rotates from 12 o'clock */}
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          transform="rotate(-90 20 20)"
+        />
+        {/* Center text */}
+        <text
+          x="20"
+          y="20"
+          textAnchor="middle"
+          dominantBaseline="central"
+          className="fill-foreground"
+          style={{ fontSize: remaining >= 100 ? "9px" : "11px", fontWeight: 600, fontFamily: "ui-monospace, monospace" }}
+        >
+          {isOverdue ? "!" : remaining}
+        </text>
+      </svg>
+    </div>
   );
 }
 

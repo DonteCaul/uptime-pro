@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { LeaderboardData } from "./page";
+import { StatTicker, type CommunityStats } from "./StatTicker";
 
 const PERIODS = [
   { value: "day", label: "Today" },
@@ -232,8 +233,10 @@ function HomeDzGlobe({ users }: { users: HomeDzUser[] }) {
 
 export function SocialClient({
   dataByPeriod,
+  communityStats,
 }: {
   dataByPeriod: Record<string, LeaderboardData>;
+  communityStats: CommunityStats;
 }) {
   const [period, setPeriod] = useState<Period>("all");
   const data = dataByPeriod[period] ?? dataByPeriod.all;
@@ -364,6 +367,13 @@ export function SocialClient({
               sharing their home DZ
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Community stats ticker */}
+      <Card>
+        <CardContent className="pt-6 pb-6">
+          <StatTicker stats={communityStats} />
         </CardContent>
       </Card>
     </div>

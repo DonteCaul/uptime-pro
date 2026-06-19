@@ -509,6 +509,10 @@ export type Database = {
           total_jumps: number
         }[]
       }
+      community_stats: {
+        Args: never
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
