@@ -119,6 +119,17 @@ export async function POST(request: NextRequest) {
   // Analysis overrides from firmware-smoothed summary values.
   if (meta.avg_freefall_speed_ms != null) update.avg_freefall_speed_ms = meta.avg_freefall_speed_ms;
   if (meta.opening_peak_g != null) update.opening_peak_g = meta.opening_peak_g;
+  // Speed fields — GPS-based horizontal speeds.
+  if (meta.max_freefall_horiz_ms != null) update.max_freefall_horiz_ms = meta.max_freefall_horiz_ms;
+  if (meta.avg_freefall_horiz_ms != null) update.avg_freefall_horiz_ms = meta.avg_freefall_horiz_ms;
+  if (meta.max_canopy_horiz_ms != null) update.max_canopy_horiz_ms = meta.max_canopy_horiz_ms;
+  if (meta.exit_ground_speed_knot != null) update.exit_ground_speed_knot = meta.exit_ground_speed_knot;
+  // Distance fields — position-derived from firmware.
+  if (meta.exit_distance_m != null) update.exit_distance_m = meta.exit_distance_m;
+  if (meta.freefall_dist_horiz_m != null) update.freefall_dist_horiz_m = meta.freefall_dist_horiz_m;
+  if (meta.freefall_dist_vert_m != null) update.freefall_dist_vert_m = meta.freefall_dist_vert_m;
+  if (meta.canopy_dist_horiz_m != null) update.canopy_dist_horiz_m = meta.canopy_dist_horiz_m;
+  if (meta.canopy_dist_vert_m != null) update.canopy_dist_vert_m = meta.canopy_dist_vert_m;
 
   const { error: updateErr } = await admin
     .from("jumps")

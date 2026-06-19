@@ -135,6 +135,19 @@ export const jumps = pgTable("jumps", {
   isPublic: boolean("is_public").default(true).notNull(),
   isPlaneRide: boolean("is_plane_ride").default(false).notNull(),
 
+  // Summary speeds (firmware-smoothed, GPS-based only — no barometric derivatives)
+  maxFreefallHorizMs: numeric("max_freefall_horiz_ms"),
+  avgFreefallHorizMs: numeric("avg_freefall_horiz_ms"),
+  maxCanopyHorizMs: numeric("max_canopy_horiz_ms"),
+  exitGroundSpeedKnot: numeric("exit_ground_speed_knot"),
+  exitDistanceM: numeric("exit_distance_m"),
+
+  // Summary distances (position-derived, not sensor-derived)
+  freefallDistHorizM: numeric("freefall_dist_horiz_m"),
+  freefallDistVertM: numeric("freefall_dist_vert_m"),
+  canopyDistHorizM: numeric("canopy_dist_horiz_m"),
+  canopyDistVertM: numeric("canopy_dist_vert_m"),
+
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

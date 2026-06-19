@@ -1,4 +1,5 @@
 import { createServerClient } from "@/lib/supabase/server";
+import { ProfileClient } from "./ProfileClient";
 import { ProfileEditForm } from "./ProfileEditForm";
 
 export const dynamic = "force-dynamic";
@@ -47,11 +48,22 @@ export default async function ProfilePage() {
     data: (Profile & { units: string | null; theme: string | null }) | null;
   };
 
+  // Fetch total jump count for the tab badge.
+  const { count: jumpCount } = await supabase
+    .from("jumps")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user!.id);
+
   return (
-    <ProfileEditForm
-      initialProfile={profile}
-      initialUnits={(profile?.units as "metric" | "imperial") ?? "metric"}
-      initialTheme={(profile?.theme as "light" | "dark") ?? "light"}
+    <ProfileClient
+      jumpCount={jumpCount ?? 0}
+      editForm={
+        <ProfileEditForm
+          initialProfile={profile}
+          initialUnits={(profile?.units as "metric" | "imperial") ?? "metric"}
+          initialTheme={(profile?.theme as "light" | "dark") ?? "light"}
+        />
+      }
     />
   );
 }

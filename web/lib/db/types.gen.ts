@@ -227,6 +227,15 @@ export type Database = {
           avg_g_force: number | null
           is_swoop: boolean
           swoop_speed_knot: number | null
+          max_freefall_horiz_ms: number | null
+          avg_freefall_horiz_ms: number | null
+          max_canopy_horiz_ms: number | null
+          exit_ground_speed_knot: number | null
+          exit_distance_m: number | null
+          freefall_dist_horiz_m: number | null
+          freefall_dist_vert_m: number | null
+          canopy_dist_horiz_m: number | null
+          canopy_dist_vert_m: number | null
           notes: string | null
           raw_file_storage_key: string | null
           row_count: number | null
@@ -262,6 +271,15 @@ export type Database = {
           avg_g_force?: number | null
           is_swoop?: boolean | null
           swoop_speed_knot?: number | null
+          max_freefall_horiz_ms?: number | null
+          avg_freefall_horiz_ms?: number | null
+          max_canopy_horiz_ms?: number | null
+          exit_ground_speed_knot?: number | null
+          exit_distance_m?: number | null
+          freefall_dist_horiz_m?: number | null
+          freefall_dist_vert_m?: number | null
+          canopy_dist_horiz_m?: number | null
+          canopy_dist_vert_m?: number | null
           notes?: string | null
           raw_file_storage_key?: string | null
           row_count?: number | null
@@ -297,6 +315,15 @@ export type Database = {
           avg_g_force?: number | null
           is_swoop?: boolean | null
           swoop_speed_knot?: number | null
+          max_freefall_horiz_ms?: number | null
+          avg_freefall_horiz_ms?: number | null
+          max_canopy_horiz_ms?: number | null
+          exit_ground_speed_knot?: number | null
+          exit_distance_m?: number | null
+          freefall_dist_horiz_m?: number | null
+          freefall_dist_vert_m?: number | null
+          canopy_dist_horiz_m?: number | null
+          canopy_dist_vert_m?: number | null
           notes?: string | null
           raw_file_storage_key?: string | null
           row_count?: number | null

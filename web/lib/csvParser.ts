@@ -39,6 +39,17 @@ export interface JumpMeta {
   // when available (firmware-smoothed values are more accurate than raw sensor).
   avg_freefall_speed_ms?: number | null;
   opening_peak_g?: number | null;
+  // Speed fields from summary JSON (GPS-based, not barometric derivative).
+  max_freefall_horiz_ms?: number | null;
+  avg_freefall_horiz_ms?: number | null;
+  max_canopy_horiz_ms?: number | null;
+  exit_ground_speed_knot?: number | null;
+  // Distance fields from summary JSON (position-derived).
+  exit_distance_m?: number | null;
+  freefall_dist_horiz_m?: number | null;
+  freefall_dist_vert_m?: number | null;
+  canopy_dist_horiz_m?: number | null;
+  canopy_dist_vert_m?: number | null;
 }
 
 export interface SensorRow {
@@ -339,6 +350,17 @@ export function parseSummaryJSON(json: any, rowCount: number): JumpMeta {
   // Analysis fields — firmware-smoothed values override raw-sensor calculations.
   avg_freefall_speed_ms: Math.abs(num(m.freefall?.speed?.avgVert) ?? 0) || undefined,
   opening_peak_g: num(m.deployment?.openingGForce) ?? undefined,
+  // Speed fields — GPS-based horizontal speeds (not barometric derivative).
+  max_freefall_horiz_ms: num(m.freefall?.speed?.maxHoriz) ?? undefined,
+  avg_freefall_horiz_ms: num(m.freefall?.speed?.avgHoriz) ?? undefined,
+  max_canopy_horiz_ms: num(m.canopy?.speed?.maxHoriz) ?? undefined,
+  exit_ground_speed_knot: num(m.exit?.groundSpeed) ?? undefined,
+  // Distance fields — position-derived from firmware.
+  exit_distance_m: num(m.exit?.distanceToLA) ?? undefined,
+  freefall_dist_horiz_m: num(m.freefall?.distance?.horizontal) ?? undefined,
+  freefall_dist_vert_m: num(m.freefall?.distance?.vertical) ?? undefined,
+  canopy_dist_horiz_m: num(m.canopy?.distance?.horizontal) ?? undefined,
+  canopy_dist_vert_m: num(m.canopy?.distance?.vertical) ?? undefined,
   };
 }
 
