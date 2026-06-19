@@ -109,6 +109,18 @@ interface WeatherSummary {
   gusts_kph: number | null;
   cloud_pct: number | null;
   precip_mm: number | null;
+  w1000_kph: number | null;
+  w1000_dir_deg: number | null;
+  w1000_dir: string | null;
+  w950_kph: number | null;
+  w950_dir_deg: number | null;
+  w950_dir: string | null;
+  w925_kph: number | null;
+  w925_dir_deg: number | null;
+  w925_dir: string | null;
+  w900_kph: number | null;
+  w900_dir_deg: number | null;
+  w900_dir: string | null;
   w850_kph: number | null;
   w850_dir_deg: number | null;
   w850_dir: string | null;
@@ -118,6 +130,9 @@ interface WeatherSummary {
   w600_kph: number | null;
   w600_dir_deg: number | null;
   w600_dir: string | null;
+  w500_kph: number | null;
+  w500_dir_deg: number | null;
+  w500_dir: string | null;
 }
 
 function StatChip({

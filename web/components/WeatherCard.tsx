@@ -167,6 +167,10 @@ function overallCondition(weather: WeatherSummary): {
 } {
   const winds = [
     kphToKt(weather.wind_kph),
+    kphToKt(weather.w1000_kph),
+    kphToKt(weather.w950_kph),
+    kphToKt(weather.w925_kph),
+    kphToKt(weather.w900_kph),
     kphToKt(weather.w850_kph),
     kphToKt(weather.w700_kph),
     kphToKt(weather.w600_kph),
@@ -259,6 +263,34 @@ export function WeatherCard({
           dirDeg={weather.wind_dir_deg}
           dir={weather.wind_dir}
           gustKph={weather.gusts_kph}
+          units={units}
+        />
+        <WindRow
+          label="~1,000 ft"
+          kph={weather.w1000_kph}
+          dirDeg={weather.w1000_dir_deg}
+          dir={weather.w1000_dir}
+          units={units}
+        />
+        <WindRow
+          label="~1,600 ft"
+          kph={weather.w950_kph}
+          dirDeg={weather.w950_dir_deg}
+          dir={weather.w950_dir}
+          units={units}
+        />
+        <WindRow
+          label="~2,600 ft"
+          kph={weather.w925_kph}
+          dirDeg={weather.w925_dir_deg}
+          dir={weather.w925_dir}
+          units={units}
+        />
+        <WindRow
+          label="~3,300 ft"
+          kph={weather.w900_kph}
+          dirDeg={weather.w900_dir_deg}
+          dir={weather.w900_dir}
           units={units}
         />
         <WindRow

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 60" width="280" height="60">
+  <defs>
+    <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9b76" />
+      <stop offset="100%" stop-color="#077a5e" />
+    </linearGradient>
+  </defs>
+
+  <!-- Hexagon icon -->
+  <g transform="translate(30, 30)">
+    <polygon
+      points="0,-22 19,-11 19,11 0,22 -19,11 -19,-11"
+      fill="url(#hexGrad)"
+      stroke="none"
+    />
+    <polygon
+      points="0,-14 12,-7 12,7 0,14 -12,7 -12,-7"
+      fill="none"
+      stroke="rgba(255,255,255,0.35)"
+      stroke-width="1.5"
+    />
+  </g>
+
+  <!-- UpTime text -->
+  <text
+    x="62"
+    y="28"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-weight="700"
+    font-size="22"
+    fill="#0d9b76"
+    letter-spacing="1.5"
+  >UpTime</text>
+
+  <!-- .Pro text -->
+  <text
+    x="62"
+    y="48"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-weight="700"
+    font-size="22"
+    fill="#077a5e"
+    letter-spacing="1.5"
+  >.Pro</text>
+</svg>
