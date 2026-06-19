@@ -35,7 +35,7 @@ as $$
   where user_id = auth.uid()
     -- "Rode the plane down" sentinel is excluded from freefall-based stats
     -- (preserves original app semantics).
-    and discipline is distinct from 'Rode the plane down';
+    and discipline <> 'Rode the plane down';
 $$;
 
 -- Allow authenticated users to call it. SECURITY DEFINER runs as the owner,
