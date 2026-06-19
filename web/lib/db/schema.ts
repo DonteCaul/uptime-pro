@@ -91,9 +91,8 @@ export const devices = pgTable("devices", {
 });
 
 // ─── Jumps ─────────────────────────────────────────────────────────────────
-// `discipline` is a TEXT column (not an id) to preserve the original semantics:
-// it stores values like "Belly / RW", "BASE", and the sentinel
-// "Rode the plane down". Renamed from `discipline_id` to fix the misnomer.
+// `discipline` is a TEXT column (not an id) — can be NULL for unclassified jumps.
+// `is_plane_ride` is a boolean flag for non-jump flights (rode the plane down).
 // `rawFileStorageKey` replaces the old absolute `raw_file_path` now that files
 // live in Supabase Storage.
 
@@ -132,6 +131,9 @@ export const jumps = pgTable("jumps", {
   avgGForce: numeric("avg_g_force"),
   isSwoop: boolean("is_swoop").default(false).notNull(),
   swoopSpeedKnot: numeric("swoop_speed_knot"),
+
+  isPublic: boolean("is_public").default(true).notNull(),
+  isPlaneRide: boolean("is_plane_ride").default(false).notNull(),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()

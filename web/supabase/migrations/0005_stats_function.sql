@@ -33,9 +33,8 @@ as $$
     max(jumped_at)
   from public.jumps
   where user_id = auth.uid()
-    -- "Rode the plane down" sentinel is excluded from freefall-based stats
-    -- (preserves original app semantics).
-    and discipline is distinct from 'Rode the plane down';
+    -- is_plane_ride marks non-jump flights (rode the plane down).
+    and not is_plane_ride;
 $$;
 
 -- Allow authenticated users to call it. SECURITY DEFINER runs as the owner,

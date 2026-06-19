@@ -5,7 +5,7 @@
 --
 -- Returns a flat JSON object:
 --   users      – count of public profiles
---   jumps      – count of public jumps (excl. "Rode the plane down")
+--   jumps      – count of public jumps (excl. plane rides)
 --   total_ft   – sum of exit altitudes converted to feet
 --   freefall_hrs – sum of freefall durations in hours
 --   dropzones  – count of distinct 1-decimal GPS grids visited
@@ -28,7 +28,7 @@ as $$
       join public.profiles p on p.id = j.user_id
       where p.is_public = true
         and j.is_public = true
-        and j.discipline is distinct from 'Rode the plane down'
+        and not j.is_plane_ride
     ),
     'total_ft', (
       select coalesce(sum((j.exit_altitude_m - j.deployment_altitude_m)::numeric) * 3.28084, 0)::bigint

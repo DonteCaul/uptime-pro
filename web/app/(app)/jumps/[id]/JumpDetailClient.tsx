@@ -1133,7 +1133,6 @@ export function JumpDetailClient({
               "Static Line",
               "Canopy Piloting / Swooping",
               "BASE",
-              "Rode the plane down",
               "Other",
             ].map((d) => (
               <option key={d} value={d}>

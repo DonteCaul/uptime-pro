@@ -4,7 +4,7 @@
 -- period: 'day' | 'month' | 'year' | 'all'
 --
 -- Returns 4 result sets in a single round-trip:
---   1. Most jumps (period-filtered, excludes "Rode the plane down")
+--   1. Most jumps (period-filtered, excludes plane rides)
 --   2. Most distinct DZs visited (1-decimal GPS grid ≈ 11km)
 --   3. Most jumps by discipline
 --   4. Home DZs of public users (for the globe map)
@@ -27,7 +27,7 @@ as $$
         from public.profiles p
         join public.jumps j on j.user_id = p.id
         where p.is_public = true
-          and j.discipline is distinct from 'Rode the plane down'
+          and not j.is_plane_ride
           and (
             period = 'all' or
             (period = 'day'   and j.jumped_at >= current_date) or
@@ -69,7 +69,7 @@ as $$
         join public.jumps j on j.user_id = p.id
         where p.is_public = true
           and j.discipline is not null
-          and j.discipline is distinct from 'Rode the plane down'
+          and not j.is_plane_ride
           and (
             period = 'all' or
             (period = 'day'   and j.jumped_at >= current_date) or

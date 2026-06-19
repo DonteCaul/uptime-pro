@@ -89,7 +89,7 @@ export default async function PublicProfilePage({
     .select("id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms")
     .eq("user_id", id)
     .eq("is_public", true)
-    .neq("discipline", "Rode the plane down")
+    .neq("is_plane_ride", true)
     .order("jumped_at", { ascending: false, nullsFirst: false })
     .range(0, 9);
 
@@ -101,7 +101,7 @@ export default async function PublicProfilePage({
     .select("id", { count: "exact", head: true })
     .eq("user_id", id)
     .eq("is_public", true)
-    .neq("discipline", "Rode the plane down");
+    .neq("is_plane_ride", true);
 
   const totalFreefall = recentJumps.reduce(
     (s, j) => s + (Number(j.freefall_duration_s) || 0),

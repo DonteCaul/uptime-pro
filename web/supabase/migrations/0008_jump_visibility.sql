@@ -62,7 +62,7 @@ as $$
         join public.jumps j on j.user_id = p.id
         where p.is_public = true
           and j.is_public = true
-          and j.discipline is distinct from 'Rode the plane down'
+          and not j.is_plane_ride
           and (
             period = 'all' or
             (period = 'day'   and j.jumped_at >= current_date) or
@@ -106,7 +106,7 @@ as $$
         where p.is_public = true
           and j.is_public = true
           and j.discipline is not null
-          and j.discipline is distinct from 'Rode the plane down'
+          and not j.is_plane_ride
           and (
             period = 'all' or
             (period = 'day'   and j.jumped_at >= current_date) or
@@ -121,11 +121,18 @@ as $$
     'homeDzs', (
       select coalesce(json_agg(t), '[]'::json)
       from (
-        select p.id, p.full_name, p.avatar_url, p.home_dz, p.home_dz_lat, p.home_dz_lon
-        from public.profiles p
+        select distinct
+               round(j.dz_lat::numeric, 1) as dz_lat,
+               round(j.dz_lon::numeric, 1) as dz_lon,
+               count(j.id)::int as jump_count
+        from public.jumps j
+        join public.profiles p on p.id = j.user_id
         where p.is_public = true
-          and p.home_dz_lat is not null
-          and p.home_dz_lon is not null
+          and j.is_public = true
+          and j.dz_lat is not null
+          and j.dz_lon is not null
+        group by round(j.dz_lat::numeric, 1), round(j.dz_lon::numeric, 1)
+        order by jump_count desc
       ) t
     )
   )
