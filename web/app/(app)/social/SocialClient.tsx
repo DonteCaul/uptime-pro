@@ -83,15 +83,13 @@ function LeaderRow({
   );
 }
 
-interface HomeDzUser {
-  id: string;
-  full_name: string | null;
-  home_dz: string | null;
-  home_dz_lat: string | null;
-  home_dz_lon: string | null;
+interface DropzoneLocation {
+  dz_lat: number;
+  dz_lon: number;
+  jump_count: number;
 }
 
-function HomeDzGlobe({ users }: { users: HomeDzUser[] }) {
+function DzGlobe({ locations }: { locations: DropzoneLocation[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<unknown>(null);
 
@@ -105,21 +103,14 @@ function HomeDzGlobe({ users }: { users: HomeDzUser[] }) {
       if (cancelled || !containerRef.current) return;
       mapboxgl.accessToken = token;
 
-      const valid = users.filter(
-        (u) => u.home_dz_lat && u.home_dz_lon,
-      );
-      const features = valid.map((u) => ({
+      const features = locations.map((loc) => ({
         type: "Feature" as const,
         geometry: {
           type: "Point" as const,
-          coordinates: [
-            parseFloat(u.home_dz_lon!),
-            parseFloat(u.home_dz_lat!),
-          ],
+          coordinates: [loc.dz_lon, loc.dz_lat],
         },
         properties: {
-          name: u.full_name ?? "Anonymous",
-          dz: u.home_dz ?? "",
+          jumps: loc.jump_count,
         },
       }));
 
@@ -140,7 +131,7 @@ function HomeDzGlobe({ users }: { users: HomeDzUser[] }) {
           // older mapbox versions
         }
 
-        map.addSource("home-dzs", {
+        map.addSource("dz-locations", {
           type: "geojson",
           data: { type: "FeatureCollection", features },
         });
@@ -167,40 +158,51 @@ function HomeDzGlobe({ users }: { users: HomeDzUser[] }) {
           );
         }
 
+        // Circle layer sized by jump count
         map.addLayer({
-          id: "home-dzs-points",
+          id: "dz-locations-points",
           type: "circle",
-          source: "home-dzs",
+          source: "dz-locations",
           paint: {
-            "circle-radius": 7,
-            "circle-color": "#3b82f6",
+            "circle-radius": [
+              "interpolate",
+              ["linear"],
+              ["get", "jumps"],
+              1, 5,
+              10, 7,
+              50, 10,
+              200, 14,
+            ],
+            "circle-color": "#10966a",
             "circle-stroke-width": 2,
             "circle-stroke-color": "#fff",
+            "circle-opacity": 0.85,
           },
         });
 
-        map.on("click", "home-dzs-points", (e) => {
+        map.on("click", "dz-locations-points", (e) => {
           const rawFeature = e.features?.[0];
           if (!rawFeature) return;
-          // mapbox-gl types lag on properties/geometry access; cast.
           const feature = rawFeature as unknown as {
             properties: Record<string, unknown>;
             geometry: { coordinates: [number, number] };
           };
           const props = feature.properties ?? {};
           const coords = feature.geometry.coordinates;
+          const jumps = props.jumps ?? 0;
+          const label = jumps === 1 ? "1 jump" : `${jumps} jumps`;
           new mapboxgl.Popup()
             .setLngLat(coords)
             .setHTML(
-              `<strong>${props.name ?? "Anonymous"}</strong>${props.dz ? `<br/>${props.dz}` : ""}`,
+              `<strong>${label}</strong>`,
             )
             .addTo(map);
         });
 
-        map.on("mouseenter", "home-dzs-points", () => {
+        map.on("mouseenter", "dz-locations-points", () => {
           map.getCanvas().style.cursor = "pointer";
         });
-        map.on("mouseleave", "home-dzs-points", () => {
+        map.on("mouseleave", "dz-locations-points", () => {
           map.getCanvas().style.cursor = "";
         });
       });
@@ -212,7 +214,7 @@ function HomeDzGlobe({ users }: { users: HomeDzUser[] }) {
       if (map?.remove) map.remove();
       mapRef.current = null;
     };
-  }, [users]);
+  }, [locations]);
 
   if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {
     return (
@@ -244,7 +246,7 @@ export function SocialClient({
   const jumpLeaders = data?.jumps ?? [];
   const dzLeaders = data?.dzs ?? [];
   const discLeaders = data?.disciplines ?? [];
-  const homeDzUsers = data?.homeDzs ?? [];
+  const dzLocations = data?.homeDzs ?? [];
 
   // Group discipline leaders: top user(s) per discipline.
   const discMap = new Map<string, typeof discLeaders>();
@@ -350,21 +352,21 @@ export function SocialClient({
         </Card>
       )}
 
-      {/* Home DZ globe */}
+      {/* Dropzones Visited globe */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Home Dropzones</CardTitle>
+          <CardTitle className="text-base">Dropzones Visited</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <HomeDzGlobe users={homeDzUsers} />
-          {homeDzUsers.length === 0 ? (
+          <DzGlobe locations={dzLocations} />
+          {dzLocations.length === 0 ? (
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              No public home DZs yet — set yours in Profile
+              No public dropzones logged yet
             </p>
           ) : (
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              {homeDzUsers.length} jumper{homeDzUsers.length !== 1 ? "s" : ""}{" "}
-              sharing their home DZ
+              {dzLocations.length} dropzone{dzLocations.length !== 1 ? "s" : ""}{" "}
+              logged from jump data
             </p>
           )}
         </CardContent>

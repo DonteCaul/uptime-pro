@@ -27,17 +27,17 @@ interface DiscLeader extends LeaderUser {
   jump_count: number;
 }
 
-interface HomeDz extends LeaderUser {
-  home_dz: string | null;
-  home_dz_lat: string | null;
-  home_dz_lon: string | null;
+interface DropzoneLocation {
+  dz_lat: number;
+  dz_lon: number;
+  jump_count: number;
 }
 
 export interface LeaderboardData {
   jumps: JumpLeader[];
   dzs: DzLeader[];
   disciplines: DiscLeader[];
-  homeDzs: HomeDz[];
+  homeDzs: DropzoneLocation[];
 }
 
 // Pre-fetch all four periods at build/revalidate time so the client can
