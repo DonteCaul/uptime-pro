@@ -188,7 +188,15 @@ export async function ingestJumpFile(
         const payload: JumpDataPointInsert[] = batch.map((r) => {
           const row: JumpDataPointInsert = { jump_id: jumpId };
           for (const col of SENSOR_COLS) {
-            (row as Record<string, unknown>)[col] = r[col] ?? null;
+            const val = r[col] ?? null;
+            // device_mode and gps_sats are smallint in the DB — the CSV
+            // parser parseFloats all numerics, so firmware values like
+            // "2.1" (mode transition) must be rounded to integers.
+            if ((col === "device_mode" || col === "gps_sats") && val != null) {
+              (row as Record<string, unknown>)[col] = Math.round(val as number);
+            } else {
+              (row as Record<string, unknown>)[col] = val;
+            }
           }
           return row;
         });
