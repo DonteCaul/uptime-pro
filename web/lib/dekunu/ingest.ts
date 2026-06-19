@@ -235,6 +235,9 @@ export async function ingestJumpFile(
         overrides.avg_freefall_speed_ms = meta.avg_freefall_speed_ms;
       if (meta.opening_peak_g != null)
         overrides.opening_peak_g = meta.opening_peak_g;
+      // Glide ratio — canopy path/vertical from summary (overrides broken CSV calc).
+      if (meta.canopy_glide_ratio != null)
+        overrides.avg_glide_ratio = meta.canopy_glide_ratio;
       // Speed fields — GPS-based horizontal speeds.
       if (meta.max_freefall_horiz_ms != null)
         overrides.max_freefall_horiz_ms = meta.max_freefall_horiz_ms;

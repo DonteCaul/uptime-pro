@@ -119,6 +119,8 @@ export async function POST(request: NextRequest) {
   // Analysis overrides from firmware-smoothed summary values.
   if (meta.avg_freefall_speed_ms != null) update.avg_freefall_speed_ms = meta.avg_freefall_speed_ms;
   if (meta.opening_peak_g != null) update.opening_peak_g = meta.opening_peak_g;
+  // Glide ratio — canopy path/vertical from summary.
+  if (meta.canopy_glide_ratio != null) update.avg_glide_ratio = meta.canopy_glide_ratio;
   // Speed fields — GPS-based horizontal speeds.
   if (meta.max_freefall_horiz_ms != null) update.max_freefall_horiz_ms = meta.max_freefall_horiz_ms;
   if (meta.avg_freefall_horiz_ms != null) update.avg_freefall_horiz_ms = meta.avg_freefall_horiz_ms;

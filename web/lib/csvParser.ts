@@ -39,6 +39,8 @@ export interface JumpMeta {
   // when available (firmware-smoothed values are more accurate than raw sensor).
   avg_freefall_speed_ms?: number | null;
   opening_peak_g?: number | null;
+  // Glide ratio — canopy path / vertical from summary (overrides broken CSV calc).
+  canopy_glide_ratio?: number | null;
   // Speed fields from summary JSON (GPS-based, not barometric derivative).
   max_freefall_horiz_ms?: number | null;
   avg_freefall_horiz_ms?: number | null;
@@ -350,6 +352,12 @@ export function parseSummaryJSON(json: any, rowCount: number): JumpMeta {
   // Analysis fields — firmware-smoothed values override raw-sensor calculations.
   avg_freefall_speed_ms: Math.abs(num(m.freefall?.speed?.avgVert) ?? 0) || undefined,
   opening_peak_g: num(m.deployment?.openingGForce) ?? undefined,
+  // Glide ratio — canopy path distance / vertical descent (overrides CSV barometric calc).
+  canopy_glide_ratio: (() => {
+    const path = num(m.canopy?.distance?.path);
+    const vert = num(m.canopy?.distance?.vertical);
+    return (path != null && vert != null && vert > 0) ? path / vert : undefined;
+  })(),
   // Speed fields — GPS-based horizontal speeds (not barometric derivative).
   max_freefall_horiz_ms: num(m.freefall?.speed?.maxHoriz) ?? undefined,
   avg_freefall_horiz_ms: num(m.freefall?.speed?.avgHoriz) ?? undefined,
