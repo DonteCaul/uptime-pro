@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -198,7 +198,14 @@ export function JumpDetailClient({
 
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(30);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+
+  // Seek to a specific row index and sync the playback time ref.
+  const seekTo = useCallback((idx: number) => {
+    const clamped = Math.max(0, Math.min(idx, track.length - 1));
+    setCursor(clamped);
+    playbackMs.current = track[clamped]?.sample_ms ?? 0;
+  }, [track]);
   const [notes, setNotes] = useState(initialJump.notes ?? "");
   const [discipline, setDiscipline] = useState(initialJump.discipline ?? "");
   const [isPublic, setIsPublic] = useState(initialJump.is_public ?? true);
@@ -212,6 +219,8 @@ export function JumpDetailClient({
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const rafRef = useRef<number | null>(null);
   const lastRafTime = useRef<number | null>(null);
+  const playbackMs = useRef<number>(0); // exact time position in sample_ms units
+  const cursorAtPlayStart = useRef(0); // snapshot of cursor when play was pressed
 
   // ── Build Mapbox once track is ready ──────────────────────────────────────
   useEffect(() => {
@@ -432,29 +441,41 @@ export function JumpDetailClient({
     }
   }, [cursor, track]);
 
-  // Time-based RAF playback. Defined inside the effect so it closes over the
-  // current track + speed and self-schedules via rafRef.
+  // Time-based RAF playback. Uses a floating-point time position (playbackMs)
+  // to advance smoothly regardless of row density. Converts to row index each
+  // frame by finding the nearest sample_ms match.
   useEffect(() => {
     if (!playing || !track.length) return;
 
+    // Initialize playback position from the cursor at the moment play was pressed.
+    playbackMs.current = track[cursorAtPlayStart.current]?.sample_ms ?? 0;
     lastRafTime.current = null;
     const animate = (now: number) => {
       if (lastRafTime.current === null) lastRafTime.current = now;
       const realDelta = now - lastRafTime.current;
       lastRafTime.current = now;
 
-      setCursor((c) => {
-        if (c >= track.length - 1) {
-          setPlaying(false);
-          return c;
-        }
-        const dataDelta = realDelta * playbackSpeed;
-        const targetMs = (track[c].sample_ms ?? 0) + dataDelta;
-        let next = c;
-        while (next < track.length - 1 && (track[next].sample_ms ?? 0) < targetMs)
-          next++;
-        return next;
-      });
+      // Advance the time position smoothly (realDelta is in ms, sample_ms is in ms).
+      playbackMs.current += realDelta * playbackSpeed;
+
+      // Convert time position to nearest row index via binary search.
+      const targetMs = playbackMs.current;
+      const lastMs = track[track.length - 1]?.sample_ms ?? Infinity;
+      if (targetMs >= lastMs) {
+        setCursor(track.length - 1);
+        setPlaying(false);
+        return;
+      }
+
+      // Binary search for the row whose sample_ms is closest to targetMs.
+      let lo = 0;
+      let hi = track.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if ((track[mid].sample_ms ?? 0) < targetMs) lo = mid + 1;
+        else hi = mid;
+      }
+      setCursor(lo);
 
       rafRef.current = requestAnimationFrame(animate);
     };
@@ -695,7 +716,7 @@ export function JumpDetailClient({
           label="Exit Alt"
           value={alt(jump.exit_altitude_m, units)}
           accent="#00cc55"
-          onClick={() => setCursor(eventIndices.exitIdx)}
+          onClick={() => seekTo(eventIndices.exitIdx)}
         />
         <StatChip
           label="FF Time"
@@ -706,13 +727,13 @@ export function JumpDetailClient({
           label="Max Speed"
           value={speed(jump.max_freefall_speed_ms, units)}
           accent="#ff3333"
-          onClick={() => setCursor(eventIndices.maxSpeedIdx)}
+          onClick={() => seekTo(eventIndices.maxSpeedIdx)}
         />
         <StatChip
           label="Deploy Alt"
           value={alt(jump.deployment_altitude_m, units)}
           accent="#3399ff"
-          onClick={() => setCursor(eventIndices.deployIdx)}
+          onClick={() => seekTo(eventIndices.deployIdx)}
         />
         <StatChip
           label="Canopy"
@@ -745,7 +766,7 @@ export function JumpDetailClient({
             label="Open G"
             value={`${analysis.peakG.toFixed(1)}G`}
             accent="#C084FC"
-            onClick={() => setCursor(eventIndices.peakGIdx)}
+            onClick={() => seekTo(eventIndices.peakGIdx)}
           />
         )}
         {analysis?.avgG != null && (
@@ -877,7 +898,7 @@ export function JumpDetailClient({
             cursor={cursor}
             onCursor={(idx) => {
               setPlaying(false);
-              setCursor(idx);
+              seekTo(idx);
             }}
             units={units}
           />
@@ -909,7 +930,7 @@ export function JumpDetailClient({
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => {
-                  setCursor(0);
+                  seekTo(0);
                   setPlaying(false);
                 }}
                 className="p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -917,7 +938,10 @@ export function JumpDetailClient({
                 <SkipBack size={14} />
               </button>
               <button
-                onClick={() => setPlaying((p) => !p)}
+                onClick={() => {
+                  if (!playing) cursorAtPlayStart.current = cursor;
+                  setPlaying((p) => !p);
+                }}
                 className="w-7 h-7 rounded-full flex items-center justify-center text-primary-foreground transition-colors shrink-0"
                 style={{ background: phaseColor }}
               >
@@ -929,7 +953,7 @@ export function JumpDetailClient({
               </button>
               <button
                 onClick={() => {
-                  setCursor(track.length - 1);
+                  seekTo(track.length - 1);
                   setPlaying(false);
                 }}
                 className="p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -976,7 +1000,7 @@ export function JumpDetailClient({
               value={cursor}
               onChange={(e) => {
                 setPlaying(false);
-                setCursor(Number(e.target.value));
+                seekTo(Number(e.target.value));
               }}
               className="w-full accent-primary h-1"
             />
