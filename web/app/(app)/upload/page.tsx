@@ -511,6 +511,53 @@ export default function UploadPage() {
         </div>
       )}
 
+      {/* Mode description */}
+      <Card className="bg-muted/40">
+        <CardContent className="pt-3 pb-3 px-4 text-xs text-muted-foreground leading-relaxed space-y-2">
+          {mode === "jumps" && (
+            <>
+              <p>
+                <strong className="text-foreground">Getting your files:</strong> Connect your Dekunu to your computer via USB. In the device's USB settings, enable{" "}
+                <strong className="text-foreground">Mass Storage / USB File Transfer mode</strong>. The Dekunu will mount as a removable drive. CSV files live in the{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">action/</code> folder and JSON files live in the{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">summaries/</code> folder. You'll see pairs like:
+              </p>
+              <ul className="list-disc list-inside space-y-1 pl-1">
+                <li><code className="bg-muted px-1 py-0.5 rounded text-[11px]">action/</code> → <code className="bg-muted px-1 py-0.5 rounded text-[11px]">action_469_20190112_1910-240.csv</code> — raw sensor data</li>
+                <li><code className="bg-muted px-1 py-0.5 rounded text-[11px]">summaries/</code> → <code className="bg-muted px-1 py-0.5 rounded text-[11px]">s_action_469_20190112_1910-240.json</code> — summary with altitudes, discipline, GPS, etc.</li>
+              </ul>
+              <p>
+                <strong className="text-foreground">To upload:</strong> Select both the CSV and its matching JSON for each jump. The JSON provides accurate metadata while the CSV contains the full telemetry track. Both must be present.
+              </p>
+            </>
+          )}
+          {mode === "summaries" && (
+            <>
+              <p>
+                <strong className="text-foreground">Getting your files:</strong> Same USB extraction — the <code className="bg-muted px-1 py-0.5 rounded text-[11px]">s_action_*.json</code> files live in the{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">summaries/</code> folder on the Dekunu drive.
+              </p>
+              <p>
+                <strong className="text-foreground">To upload:</strong> Select only the JSON summary files. This mode updates existing jumps that were already uploaded (e.g. missing metadata like discipline or GPS coordinates) without re-uploading the full sensor data. The system matches each JSON to its jump by filename.
+              </p>
+            </>
+          )}
+          {mode === "logs" && (
+            <>
+              <p>
+                <strong className="text-foreground">Getting your files:</strong> Via USB in Mass Storage mode, look in the{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">sysLogs/</code> folder on the Dekunu drive. Files are named like{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">syslog.N.txt</code> or{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">syslog_esp32.N.txt</code>.
+              </p>
+              <p>
+                <strong className="text-foreground">To upload:</strong> Select the TXT files to ingest device system logs for debugging and diagnostics.
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Drop zone — hidden during upload */}
       {!uploading && (
         <div
