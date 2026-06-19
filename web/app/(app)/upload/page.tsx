@@ -17,6 +17,9 @@ import type { IngestResult } from "@/lib/dekunu/ingest";
 
 type Tab = "jumps" | "logs";
 
+/** Max files uploaded concurrently to avoid hammering Postgres. */
+const CONCURRENCY = 3;
+
 interface LogResult {
   file: string;
   source: string;
@@ -24,8 +27,10 @@ interface LogResult {
 }
 
 interface UploadState {
-  /** Index of the file currently being uploaded (-1 when idle). */
-  current: number;
+  /** Indices of files currently being uploaded (empty when idle). */
+  active: number[];
+  /** Set of file indices that have finished uploading. */
+  completed: Set<number>;
   /** Whether the user has requested cancellation. */
   cancelled: boolean;
 }
@@ -79,16 +84,17 @@ export default function UploadPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>({
-    current: -1,
+    active: [],
+    completed: new Set<number>(),
     cancelled: false,
   });
   const [jumpResults, setJumpResults] = useState<IngestResult[]>([]);
   const [logResults, setLogResults] = useState<LogResult[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const abortRefs = useRef<Map<number, AbortController>>(new Map());
 
-  const uploading = uploadState.current >= 0;
+  const uploading = uploadState.active.length > 0;
   const ext = tab === "jumps" ? ".csv" : ".txt";
 
   function switchTab(next: Tab) {
@@ -123,40 +129,57 @@ export default function UploadPage() {
 
   const handleCancel = useCallback(() => {
     setUploadState((s) => ({ ...s, cancelled: true }));
-    abortRef.current?.abort();
+    // Abort all in-flight requests.
+    abortRefs.current.forEach((ac) => ac.abort());
   }, []);
 
   async function handleUpload() {
     if (!files.length) return;
-    setUploadState({ current: 0, cancelled: false });
+    setUploadState({ active: [], completed: new Set<number>(), cancelled: false });
     setJumpResults([]);
     setLogResults([]);
     setGlobalError(null);
+    abortRefs.current.clear();
 
     const endpoint =
       tab === "jumps" ? "/api/jumps/upload" : "/api/logs/upload";
-    const results: IngestResult[] | LogResult[] = [];
 
-    for (let i = 0; i < files.length; i++) {
-      // Check cancellation before each file.
-      if (uploadState.cancelled) break;
+    // Result array — index-aligned with files[] so we can insert in order.
+    const results: (IngestResult | LogResult | null)[] = new Array(files.length).fill(null);
+    let nextIndex = 0;
 
-      setUploadState((s) => ({ ...s, current: i }));
+    async function uploadFile(i: number) {
+      // Check cancellation before starting this file.
+      if (uploadState.cancelled) return;
+
+      const ac = new AbortController();
+      abortRefs.current.set(i, ac);
+
+      setUploadState((s) => ({
+        ...s,
+        active: [...s.active, i],
+      }));
 
       const formData = new FormData();
       formData.append("file", files[i]);
-
-      abortRef.current = new AbortController();
 
       try {
         const res = await fetch(endpoint, {
           method: "POST",
           body: formData,
-          signal: abortRef.current.signal,
+          signal: ac.signal,
         });
 
-        // Abort means user cancelled — stop the loop.
-        if (!res.ok && res.status === 499) break;
+        if (!res.ok && res.status === 499) {
+          // Abort — skip.
+          setUploadState((s) => ({
+            ...s,
+            active: s.active.filter((a) => a !== i),
+            completed: new Set([...s.completed, i]),
+          }));
+          abortRefs.current.delete(i);
+          return;
+        }
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? `Upload failed (${res.status})`);
@@ -167,57 +190,84 @@ export default function UploadPage() {
             status: "error",
             error: "No result returned",
           };
-          (results as IngestResult[]).push(result);
-          setJumpResults([...(results as IngestResult[])]);
+          results[i] = result;
+          // Append to jumpResults in file order — only emit results for
+          // indices ≤ current completed max so we never show gaps.
+          setJumpResults(
+            results.filter((r): r is IngestResult => r != null && "status" in r && typeof (r as IngestResult).status === "string"),
+          );
         } else {
           const result = data.results?.[0] ?? {
             file: files[i].name,
             source: "syslog",
             log_number: null,
           };
-          (results as LogResult[]).push(result);
-          setLogResults([...(results as LogResult[])]);
+          results[i] = result;
+          setLogResults(
+            results.filter((r): r is LogResult => r != null && "source" in r),
+          );
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
-          // User cancelled — stop cleanly.
           setUploadState((s) => ({ ...s, cancelled: true }));
-          break;
-        }
-
-        // Per-file error — record it but continue with remaining files.
-        const errorMsg =
-          err instanceof Error ? err.message : "Upload failed";
-        if (tab === "jumps") {
-          (results as IngestResult[]).push({
-            file: files[i].name,
-            status: "error",
-            error: errorMsg,
-          });
-          setJumpResults([...(results as IngestResult[])]);
         } else {
-          (results as LogResult[]).push({
-            file: files[i].name,
-            source: "error",
-            log_number: null,
-          });
-          setLogResults([...(results as LogResult[])]);
+          const errorMsg =
+            err instanceof Error ? err.message : "Upload failed";
+          if (tab === "jumps") {
+            results[i] = {
+              file: files[i].name,
+              status: "error",
+              error: errorMsg,
+            } as IngestResult;
+            setJumpResults(
+              results.filter((r): r is IngestResult => r != null && "status" in r && typeof (r as IngestResult).status === "string"),
+            );
+          } else {
+            results[i] = {
+              file: files[i].name,
+              source: "error",
+              log_number: null,
+            } as LogResult;
+            setLogResults(
+              results.filter((r): r is LogResult => r != null && "source" in r),
+            );
+          }
         }
+      } finally {
+        setUploadState((s) => ({
+          ...s,
+          active: s.active.filter((a) => a !== i),
+          completed: new Set([...s.completed, i]),
+        }));
+        abortRefs.current.delete(i);
       }
     }
 
-    setUploadState({ current: -1, cancelled: false });
+    // Worker pool: runs up to CONCURRENCY uploads at a time.
+    const workers: Promise<void>[] = [];
+    for (let w = 0; w < CONCURRENCY && w < files.length; w++) {
+      workers.push(
+        (async () => {
+          while (nextIndex < files.length) {
+            if (uploadState.cancelled) break;
+            const idx = nextIndex++;
+            await uploadFile(idx);
+          }
+        })(),
+      );
+    }
+
+    await Promise.all(workers);
+
+    setUploadState({ active: [], completed: new Set<number>(), cancelled: false });
     setFiles([]);
   }
-
-  const currentFileName =
-    uploadState.current >= 0 && uploadState.current < files.length
-      ? files[uploadState.current].name
-      : null;
 
   const jumpCreated = jumpResults.filter((r) => r.status === "created").length;
   const jumpDups = jumpResults.filter((r) => r.status === "duplicate").length;
   const jumpErrors = jumpResults.filter((r) => r.status === "error").length;
+  const activeCount = uploadState.active.length;
+  const completedCount = uploadState.completed.size;
 
   return (
     <div className="flex flex-col gap-5 pb-4">
@@ -324,15 +374,16 @@ export default function UploadPage() {
         </Button>
       )}
 
-      {/* Progress indicator */}
-      {uploading && currentFileName && (
+      {/* Progress indicator — shows parallel status */}
+      {uploading && (
         <Card>
           <CardContent className="pt-3 px-4">
             <div className="flex items-center gap-2 text-sm">
               <Loader2 size={15} className="animate-spin text-primary" />
               <p className="text-foreground">
-                Uploading {uploadState.current + 1} of {files.length}{" "}
-                <span className="text-muted-foreground">— {currentFileName}</span>
+                {activeCount === 1
+                  ? `Uploading ${completedCount + 1} of ${files.length}`
+                  : `Uploading ${completedCount + activeCount} of ${files.length} (${activeCount} in parallel)`}
               </p>
             </div>
           </CardContent>

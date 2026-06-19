@@ -268,7 +268,7 @@ export interface ParsedFilename {
 // Map Dekunu action type IDs to discipline strings (matches original).
 const ACTION_TYPE_DISCIPLINE: Record<number, string> = {
   240: "Belly / RW",
-  300: "BASE",
+  300: "Hop & Pop",
 };
 
 export function parseFilename(filename: string): ParsedFilename {
