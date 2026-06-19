@@ -1,11 +1,11 @@
--- Per-user stats aggregation, RLS-safe.
+-- Fix user_stats() so NULL discipline jumps are counted.
 --
--- Returns the dashboard summary (total jumps, highest exit, fastest freefall,
--- total freefall, first/last jump dates) in a single round-trip. Filters by
--- auth.uid() so the calling user only ever sees their own numbers regardless
--- of which key is used.
+-- The old query used `discipline <> 'Rode the plane down'` which evaluates to
+-- NULL (not true) when discipline is NULL, silently excluding those jumps from
+-- the dashboard count. Switch to `IS DISTINCT FROM` which correctly includes NULLs.
 --
--- Called from the Dashboard via supabase.rpc('user_stats', {}).
+-- The leaderboard and community_stats functions already used IS DISTINCT FROM,
+-- so only user_stats needed this fix.
 
 create or replace function public.user_stats()
 returns table (
@@ -33,11 +33,5 @@ as $$
     max(jumped_at)
   from public.jumps
   where user_id = auth.uid()
-    -- "Rode the plane down" sentinel is excluded from freefall-based stats
-    -- (preserves original app semantics).
     and discipline is distinct from 'Rode the plane down';
 $$;
-
--- Allow authenticated users to call it. SECURITY DEFINER runs as the owner,
--- but we explicitly filter by auth.uid() inside, so it's safe.
-grant execute on function public.user_stats() to authenticated;
