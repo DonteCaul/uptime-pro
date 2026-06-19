@@ -164,14 +164,14 @@ export function parseJumpCSV(buffer: Buffer | string): {
     canopyEndIdx = records.length - 1;
   }
 
-  // BUG FIX #1: Exit altitude = altitude at first Mode-3 row, NOT the global
-  // barometric max. The global max reads ~107m too high on average due to
-  // barometric lag during the climb-to-exit transition.
+  // BUG FIX #1: Exit altitude = AGL at first Mode-3 row (not MSL). The CSV
+  // altitudeMeters column is MSL; altitudeAboveGroundMeters is already
+  // ground-relative (baro at power-on = 0 ft).
   const exitAlt = freefallStartIdx !== null
-    ? (records[freefallStartIdx].altitudeMeters ?? 0)
+    ? (records[freefallStartIdx].altitudeAboveGroundMeters ?? 0)
     : 0;
 
-  // BUG FIX #2: Deployment altitude = altitude ~300 rows (~1.2s at 240Hz)
+  // BUG FIX #2: Deployment altitude = AGL ~300 rows (~1.2s at 240Hz)
   // after the mode transition. The transition row reads ~98m too low due to
   // the opening shock pressure transient.
   const DEPLOY_STABILIZE_ROWS = 300;
@@ -179,7 +179,7 @@ export function parseJumpCSV(buffer: Buffer | string): {
     ? Math.min(freefallEndIdx + DEPLOY_STABILIZE_ROWS, records.length - 1)
     : null;
   const deployAlt = deployIdx !== null
-    ? (records[deployIdx].altitudeMeters ?? null)
+    ? (records[deployIdx].altitudeAboveGroundMeters ?? null)
     : null;
 
   // Exit coordinates: GPS at the exit row (first Mode-3).
