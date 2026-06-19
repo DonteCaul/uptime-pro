@@ -1163,6 +1163,9 @@ export function JumpDetailClient({
               "Static Line",
               "High Pull",
               "Night Jump",
+              "Canopy Piloting / Swooping",
+              "BASE",
+              "Other",
             ].map((d) => (
               <option key={d} value={d}>
                 {d}
