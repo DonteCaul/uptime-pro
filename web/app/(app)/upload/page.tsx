@@ -19,7 +19,7 @@ import type { IngestResult } from "@/lib/dekunu/ingest";
 /** Max files uploaded concurrently to avoid hammering Postgres. */
 const CONCURRENCY = 3;
 
-type Tab = "jumps" | "logs";
+type Tab = "jumps" | "logs" | "summaries";
 type Device = "dekunu" | "generic";
 
 // ─── Discipline type ID map (Dekunu) ──────────────────────────────────────────
@@ -28,6 +28,13 @@ interface LogResult {
   file: string;
   source: string;
   log_number: number | null;
+}
+
+interface SummaryUpdateResult {
+  csv: string;
+  status: "updated" | "error";
+  jump_id?: number;
+  error?: string;
 }
 
 interface FilePair {
@@ -119,6 +126,7 @@ export default function UploadPage() {
   });
   const [jumpResults, setJumpResults] = useState<IngestResult[]>([]);
   const [logResults, setLogResults] = useState<LogResult[]>([]);
+  const [summaryResults, setSummaryResults] = useState<SummaryUpdateResult[]>([]);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRefs = useRef<Map<number, AbortController>>(new Map());
@@ -126,7 +134,9 @@ export default function UploadPage() {
   const uploading = uploadState.active.length > 0;
   const ext = tab === "jumps"
     ? device === "dekunu" ? ".csv,.json" : ".csv"
-    : ".txt";
+    : tab === "logs"
+      ? ".txt"
+      : ".json";
 
   // Build file pairs for validation and display.
   const pairs = useMemo(() => {
@@ -148,6 +158,7 @@ export default function UploadPage() {
     setFiles([]);
     setJumpResults([]);
     setLogResults([]);
+    setSummaryResults([]);
     setGlobalError(null);
   }
 
@@ -159,6 +170,7 @@ export default function UploadPage() {
     const accepted = Array.from(e.dataTransfer.files).filter((f) => {
       const lower = f.name.toLowerCase();
       if (tab === "logs") return lower.endsWith(".txt");
+      if (tab === "summaries") return lower.endsWith(".json");
       if (device === "dekunu") return lower.endsWith(".csv") || lower.endsWith(".json");
       return lower.endsWith(".csv");
     });
@@ -166,6 +178,7 @@ export default function UploadPage() {
     setFiles((prev) => [...prev, ...accepted]);
     setJumpResults([]);
     setLogResults([]);
+    setSummaryResults([]);
     setGlobalError(null);
   }
 
@@ -174,6 +187,7 @@ export default function UploadPage() {
     setFiles((prev) => [...prev, ...Array.from(e.target.files ?? [])]);
     setJumpResults([]);
     setLogResults([]);
+    setSummaryResults([]);
     setGlobalError(null);
   }
 
@@ -196,17 +210,17 @@ export default function UploadPage() {
     setUploadState({ active: [], completed: new Set<number>(), cancelled: false });
     setJumpResults([]);
     setLogResults([]);
+    setSummaryResults([]);
     setGlobalError(null);
     abortRefs.current.clear();
 
     if (tab === "logs") {
-      // System logs — upload one at a time via existing behavior.
       await uploadSystemLogs();
+    } else if (tab === "summaries") {
+      await uploadSummaries();
     } else if (device === "dekunu") {
-      // Dekunu — upload CSV+JSON pairs.
       await uploadDekunuPairs();
     } else {
-      // Generic CSV — upload CSV files only.
       await uploadGenericCsvs();
     }
 
@@ -299,6 +313,77 @@ export default function UploadPage() {
             if (uploadState.cancelled) break;
             const idx = nextIndex++;
             await uploadPair(idx);
+          }
+        })(),
+      );
+    }
+    await Promise.all(workers);
+  }
+
+  async function uploadSummaries() {
+    const jsons = files.filter((f) => f.name.toLowerCase().endsWith(".json"));
+    const endpoint = "/api/jumps/update-summary";
+    const results: (SummaryUpdateResult | null)[] = new Array(jsons.length).fill(null);
+    let nextIndex = 0;
+
+    async function uploadFile(i: number) {
+      if (uploadState.cancelled) return;
+      const ac = new AbortController();
+      abortRefs.current.set(i, ac);
+
+      setUploadState((s) => ({ ...s, active: [...s.active, i] }));
+
+      const formData = new FormData();
+      formData.append("file", jsons[i]);
+
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          body: formData,
+          signal: ac.signal,
+        });
+
+        const data = await res.json();
+        const result: SummaryUpdateResult = data.results?.[0] ?? {
+          csv: jsons[i].name,
+          status: "error",
+          error: "No result returned",
+        };
+        results[i] = result;
+        setSummaryResults(
+          results.filter((r): r is SummaryUpdateResult => r != null),
+        );
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          setUploadState((s) => ({ ...s, cancelled: true }));
+        } else {
+          results[i] = {
+            csv: jsons[i].name,
+            status: "error",
+            error: err instanceof Error ? err.message : "Upload failed",
+          };
+          setSummaryResults(
+            results.filter((r): r is SummaryUpdateResult => r != null),
+          );
+        }
+      } finally {
+        setUploadState((s) => ({
+          ...s,
+          active: s.active.filter((a) => a !== i),
+          completed: new Set([...s.completed, i]),
+        }));
+        abortRefs.current.delete(i);
+      }
+    }
+
+    const workers: Promise<void>[] = [];
+    for (let w = 0; w < CONCURRENCY && w < jsons.length; w++) {
+      workers.push(
+        (async () => {
+          while (nextIndex < jsons.length) {
+            if (uploadState.cancelled) break;
+            const idx = nextIndex++;
+            await uploadFile(idx);
           }
         })(),
       );
@@ -487,9 +572,11 @@ export default function UploadPage() {
   const uploadItemCount =
     tab === "logs"
       ? files.filter((f) => f.name.toLowerCase().endsWith(".txt")).length
-      : device === "dekunu"
-        ? pairs?.length ?? 0
-        : files.filter((f) => f.name.toLowerCase().endsWith(".csv")).length;
+      : tab === "summaries"
+        ? files.filter((f) => f.name.toLowerCase().endsWith(".json")).length
+        : device === "dekunu"
+          ? pairs?.length ?? 0
+          : files.filter((f) => f.name.toLowerCase().endsWith(".csv")).length;
 
   return (
     <div className="flex flex-col gap-5 pb-4">
@@ -497,7 +584,7 @@ export default function UploadPage() {
 
       {/* Tab toggle */}
       <div className="flex bg-muted rounded-md p-1 gap-1">
-        {(["jumps", "logs"] as const).map((t) => (
+        {(["jumps", "summaries", "logs"] as const).map((t) => (
           <button
             key={t}
             onClick={() => switchTab(t)}
@@ -508,7 +595,7 @@ export default function UploadPage() {
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {t === "jumps" ? "Jump Logs" : "System Logs"}
+            {t === "jumps" ? "Jump Logs" : t === "summaries" ? "Update Jumps" : "System Logs"}
           </button>
         ))}
       </div>
@@ -561,14 +648,18 @@ export default function UploadPage() {
               ? device === "dekunu"
                 ? "Drop CSV + JSON pairs here"
                 : "Drop CSV files here"
-              : "Drop TXT files here"}
+              : tab === "summaries"
+                ? "Drop summary JSON files here"
+                : "Drop TXT files here"}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {tab === "jumps"
               ? device === "dekunu"
                 ? "action_*.csv and s_action_*.json files"
                 : "Generic CSV format"
-              : "syslog.N.txt or syslog_esp32.N.txt"}
+              : tab === "summaries"
+                ? "s_action_*.json files to update existing jumps"
+                : "syslog.N.txt or syslog_esp32.N.txt"}
           </p>
           <input
             ref={inputRef}
@@ -631,7 +722,9 @@ export default function UploadPage() {
       {/* Upload / Cancel button */}
       {!uploading && files.length > 0 && (
         <Button onClick={handleUpload} className="w-full">
-          Upload {uploadItemCount} jump{uploadItemCount !== 1 ? "s" : ""}
+          {tab === "summaries"
+            ? `Update ${uploadItemCount} jump${uploadItemCount !== 1 ? "s" : ""}`
+            : `Upload ${uploadItemCount} jump${uploadItemCount !== 1 ? "s" : ""}`}
         </Button>
       )}
 
@@ -695,6 +788,36 @@ export default function UploadPage() {
             </p>
             {logResults.map((r, i) => (
               <LogResultItem key={`${r.file}-${i}`} r={r} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Summary update results */}
+      {summaryResults.length > 0 && (
+        <Card>
+          <CardContent className="pt-3 pb-1 px-4">
+            <p className="text-xs text-muted-foreground pb-2">
+              {summaryResults.filter((r) => r.status === "updated").length} updated
+              {summaryResults.filter((r) => r.status === "error").length > 0 &&
+                ` · ${summaryResults.filter((r) => r.status === "error").length} failed`}
+              {uploading && " · updating…"}
+            </p>
+            {summaryResults.map((r, i) => (
+              <div key={`${r.csv}-${i}`} className="flex items-start gap-2 py-2.5 border-b border-border last:border-0 text-sm">
+                {r.status === "updated" ? (
+                  <CheckCircle size={15} className="shrink-0 mt-0.5 text-primary" />
+                ) : (
+                  <AlertCircle size={15} className="shrink-0 mt-0.5 text-destructive" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-foreground truncate">{r.csv}</p>
+                  {r.status === "updated" && (
+                    <p className="text-xs text-muted-foreground">Jump metadata updated</p>
+                  )}
+                  {r.error && <p className="text-xs text-destructive">{r.error}</p>}
+                </div>
+              </div>
             ))}
           </CardContent>
         </Card>
