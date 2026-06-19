@@ -363,7 +363,8 @@ function parseFloatOrNull(v: unknown): number | null {
 }
 
 /**
- * Map Dekunu disciplineTypeId to a discipline string.
+ * Map Dekunu disciplineTypeId (from summary JSON) to a discipline string.
+ * IDs come from the device's actionTypes.json config.
  * Falls back to null for unknown IDs.
  */
 function disciplineFromTypeId(id: unknown): string | null {
@@ -371,48 +372,39 @@ function disciplineFromTypeId(id: unknown): string | null {
   const n = typeof id === "number" ? id : parseInt(id as string, 10);
   if (isNaN(n)) return null;
   const map: Record<number, string> = {
-    1: "Belly / RW",
+    1: "Angle",
     2: "Freefly",
-    3: "Wingsuit",
-    4: "Tracking",
-    5: "Angle",
-    6: "Sit Flying",
-    7: "Head Down",
-    8: "Canopy Piloting / Swooping",
-    9: "Tandem",
-    10: "AFF / Student",
-    11: "HALO / HAHO",
-    12: "BASE",
-    13: "Hop & Pop",
-    14: "Demo",
-    15: "Paragliding",
-    16: "Rode the plane down",
-    17: "Other",
+    3: "FS / Flat",
+    4: "Wingsuit",
+    5: "Hop and Pop",
+    6: "CRW",
+    7: "XRW",
+    1002: "Tandem",
+    1003: "Speed",
+    1004: "AFF Instructor",
+    1006: "Classic Accuracy",
+    1007: "Angle - Head Up",
+    1008: "Tracking",
+    1009: "AFF Video",
+    1013: "Student",
+    1020: "Static Line",
   };
   return map[n] ?? null;
 }
 
 // ─── Filename parsing ─────────────────────────────────────────────────────────
-// Dekunu filenames: action_<deviceId>_<YYYYMMDD>_<HHMM>-<actionTypeId>.csv
+// Dekunu filenames: action_<userId>_<YYYYMMDD>_<HHMM>-<sampleRateHz>.csv
+// The number after the dash is the sample rate (240 or 300), NOT a discipline.
+// Discipline is determined ONLY from the summary JSON's disciplineTypeId.
 
 export interface ParsedFilename {
-  deviceId: number | null;
-  actionTypeId: number | null;
-  discipline: string | null;
+  userId: number | null;
+  sampleRateHz: number | null;
 }
-
-// Map Dekunu action type IDs to discipline strings (CSV filename fallback).
-const ACTION_TYPE_DISCIPLINE: Record<number, string> = {
-  240: "Belly / RW",
-  300: "Hop & Pop",
-};
 
 export function parseFilename(filename: string): ParsedFilename {
   const match = filename.match(/action_(\d+)_(\d{8})_(\d{4})-(\d+)/);
-  const deviceId = match ? parseInt(match[1], 10) : null;
-  const actionTypeId = match ? parseInt(match[4], 10) : null;
-  const discipline = actionTypeId
-    ? ACTION_TYPE_DISCIPLINE[actionTypeId] ?? null
-    : null;
-  return { deviceId, actionTypeId, discipline };
+  const userId = match ? parseInt(match[1], 10) : null;
+  const sampleRateHz = match ? parseInt(match[4], 10) : null;
+  return { userId, sampleRateHz };
 }

@@ -91,20 +91,20 @@ export async function ingestJumpFile(
       meta = csvMeta;
     }
 
-    // 3. Extract device + action type from filename.
-    const { deviceId, actionTypeId, discipline: filenameDiscipline } = parseFilename(filename);
+    // 3. Extract user ID from filename (no discipline or action type
+    //    derivable from the filename — the post-dash number is sample rate Hz).
+    const { userId: filenameUserId } = parseFilename(filename);
 
-    // Discipline priority: summary JSON > filename action type
-    const discipline = summaryDiscipline ?? filenameDiscipline;
-
-    // 4. Upsert device record if we have a deviceId.
+    // 4. Upsert device record if we have a userId from the filename.
+    //    The devices table uses device_id (the Dekunu hardware serial),
+    //    which is the first number in the filename.
     let dbDeviceId: number | null = null;
-    if (deviceId) {
+    if (filenameUserId) {
       const { data: dev, error: devErr } = await admin
         .from("devices")
         .upsert(
           {
-            device_id: deviceId,
+            device_id: filenameUserId,
             last_seen_at: new Date().toISOString(),
             current_user_id: userId,
           },
@@ -167,8 +167,7 @@ export async function ingestJumpFile(
         dz_lat: meta.dz_lat,
         dz_lon: meta.dz_lon,
         row_count: meta.row_count,
-        action_type_id: actionTypeId,
-        discipline,
+        discipline: summaryDiscipline,
         jump_number: jumpNumber,
         raw_file_storage_key: `${userId}/${filename}`,
       })
