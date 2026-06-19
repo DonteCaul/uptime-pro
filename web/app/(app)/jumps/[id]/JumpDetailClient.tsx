@@ -1140,6 +1140,7 @@ export function JumpDetailClient({
             <option value="">— Select discipline —</option>
             {[
               "Angle",
+              "Angle - Head Up",
               "Freefly",
               "FS / Flat",
               "Wingsuit",
@@ -1147,17 +1148,21 @@ export function JumpDetailClient({
               "CRW",
               "XRW",
               "Tandem",
+              "Tandem Camera",
               "Speed",
-              "AFF Instructor",
-              "Classic Accuracy",
-              "Angle - Head Up",
               "Tracking",
-              "AFF Video",
+              "Flocking",
+              "Performance",
+              "Acrobatics",
               "Student",
+              "Student WS",
+              "AFF Instructor",
+              "AFF Video",
+              "IAD Instructor",
+              "Classic Accuracy",
               "Static Line",
-              "Canopy Piloting / Swooping",
-              "BASE",
-              "Other",
+              "High Pull",
+              "Night Jump",
             ].map((d) => (
               <option key={d} value={d}>
                 {d}
