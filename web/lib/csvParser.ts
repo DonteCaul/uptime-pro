@@ -35,6 +35,10 @@ export interface JumpMeta {
   // Fields populated from summary JSON only (not derivable from CSV).
   jump_number?: number;
   discipline_from_summary?: string;
+  // Analysis fields from summary JSON — override compute_jump_analysis results
+  // when available (firmware-smoothed values are more accurate than raw sensor).
+  avg_freefall_speed_ms?: number | null;
+  opening_peak_g?: number | null;
 }
 
 export interface SensorRow {
@@ -332,6 +336,9 @@ export function parseSummaryJSON(json: any, rowCount: number): JumpMeta {
     row_count: rowCount,
   jump_number: num(json.customJumpNum) ?? undefined,
   discipline_from_summary: disciplineFromTypeId(json.disciplineTypeId) ?? undefined,
+  // Analysis fields — firmware-smoothed values override raw-sensor calculations.
+  avg_freefall_speed_ms: Math.abs(num(m.freefall?.speed?.avgVert) ?? 0) || undefined,
+  opening_peak_g: num(m.deployment?.openingGForce) ?? undefined,
   };
 }
 

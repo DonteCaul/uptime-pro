@@ -225,6 +225,24 @@ export async function ingestJumpFile(
       }
     }
 
+    // 9b. Override analysis columns with firmware-smoothed summary values when
+    // available. The summary JSON provides pre-computed metrics that account for
+    // barometric lag and sensor transients — more accurate than raw sensor math.
+    if (summaryBuffer) {
+      type JumpUpdate = Database["public"]["Tables"]["jumps"]["Update"];
+      const overrides: JumpUpdate = {};
+      if (meta.avg_freefall_speed_ms != null)
+        overrides.avg_freefall_speed_ms = meta.avg_freefall_speed_ms;
+      if (meta.opening_peak_g != null)
+        overrides.opening_peak_g = meta.opening_peak_g;
+      if (Object.keys(overrides).length > 0) {
+        await admin
+          .from("jumps")
+          .update(overrides)
+          .eq("id", jumpId);
+      }
+    }
+
     // 10. Archive the raw CSV to Storage (best-effort — non-fatal if it fails).
     try {
       await admin.storage

@@ -116,6 +116,9 @@ export async function POST(request: NextRequest) {
   if (meta.dz_lon != null) update.dz_lon = meta.dz_lon;
   if (meta.discipline_from_summary) update.discipline = meta.discipline_from_summary;
   if (meta.jump_number != null) update.jump_number = meta.jump_number;
+  // Analysis overrides from firmware-smoothed summary values.
+  if (meta.avg_freefall_speed_ms != null) update.avg_freefall_speed_ms = meta.avg_freefall_speed_ms;
+  if (meta.opening_peak_g != null) update.opening_peak_g = meta.opening_peak_g;
 
   const { error: updateErr } = await admin
     .from("jumps")
