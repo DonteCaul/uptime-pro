@@ -31,11 +31,13 @@ as $$
         and j.discipline is distinct from 'Rode the plane down'
     ),
     'total_ft', (
-      select coalesce(sum(j.exit_altitude_m::numeric) * 3.28084, 0)::bigint
+      select coalesce(sum((j.exit_altitude_m - j.deployment_altitude_m)::numeric) * 3.28084, 0)::bigint
       from public.jumps j
       join public.profiles p on p.id = j.user_id
       where p.is_public = true
         and j.is_public = true
+        and j.exit_altitude_m is not null
+        and j.deployment_altitude_m is not null
     ),
     'freefall_hrs', (
       select coalesce(sum(j.freefall_duration_s::numeric) / 3600, 0)::numeric
