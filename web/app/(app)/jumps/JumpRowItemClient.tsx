@@ -15,6 +15,7 @@ export interface JumpRow {
   exit_altitude_m: number | null;
   freefall_duration_s: number | null;
   max_freefall_speed_ms: number | null;
+  jump_number: number | null;
   exit_lat: number | null;
   exit_lon: number | null;
   dz_lat: number | null;
@@ -44,9 +45,9 @@ export function JumpRowItemClient({
       )}
     >
       <div className="flex items-center gap-3 min-w-0">
-        {index != null && (
+        {(jump.jump_number != null || index != null) && (
           <span className="text-sm font-bold text-muted-foreground/60 w-6 text-right shrink-0 tabular-nums">
-            {index}
+            {jump.jump_number ?? index}
           </span>
         )}
         <div className="min-w-0">

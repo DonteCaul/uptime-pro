@@ -35,6 +35,7 @@ interface JumpRow {
   exit_altitude_m: number | null;
   freefall_duration_s: number | null;
   max_freefall_speed_ms: number | null;
+  jump_number: number | null;
   exit_lat: number | null;
   exit_lon: number | null;
   dz_lat: number | null;
@@ -146,6 +147,11 @@ function JumpRowItem({
       className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors border-b border-border last:border-0"
     >
       <div className="flex items-center gap-3 min-w-0">
+        {jump.jump_number != null && (
+          <span className="text-sm font-bold text-muted-foreground/60 w-6 text-right shrink-0 tabular-nums">
+            {jump.jump_number}
+          </span>
+        )}
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground">
             {jump.jumped_at
@@ -336,7 +342,7 @@ export function JumpsTabsClient({
       supabase
         .from("jumps")
         .select(
-          "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, exit_lat, exit_lon, dz_lat, dz_lon",
+          "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, jump_number, exit_lat, exit_lon, dz_lat, dz_lon",
         )
         .eq("user_id", user.id)
         .order("jumped_at", { ascending: false, nullsFirst: false })
