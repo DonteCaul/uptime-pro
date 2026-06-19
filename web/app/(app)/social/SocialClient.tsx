@@ -355,7 +355,7 @@ export function SocialClient({
       {/* Dropzones Visited globe */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Dropzones Visited</CardTitle>
+          <CardTitle className="text-base">Community Dropzones Visited</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <DzGlobe locations={dzLocations} />
