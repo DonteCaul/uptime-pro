@@ -458,7 +458,7 @@ export function ProfileEditForm({
               onClick={() => setShowDekunuPopup(true)}
             >
               <Download size={13} className="mr-1" />
-              Setup Instructions
+              Dropzones.json Setup
             </Button>
           )}
           <select
