@@ -46,11 +46,12 @@ export async function proxy(request: NextRequest) {
   const isDev = process.env.NODE_ENV === "development";
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.mapbox.com",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.mapbox.com https://unpkg.com",
+    "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' blob: data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com",
-    "connect-src 'self' https://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://accounts.mapbox.com",
+    "font-src 'self' https://fonts.gstatic.com https://fonts.mapbox.com",
+    "img-src 'self' blob: data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.tiles.mapbox.com https://api.mapbox.com",
+    "connect-src 'self' https://*.supabase.co https://*.mapbox.com https://api.mapbox.com https://events.mapbox.com https://accounts.mapbox.com https://fonts.mapbox.com",
     "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'self'",
