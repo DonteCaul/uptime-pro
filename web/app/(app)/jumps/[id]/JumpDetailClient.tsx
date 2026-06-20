@@ -671,7 +671,7 @@ export function JumpDetailClient({
   return (
     <div className="flex flex-col min-h-screen bg-background pb-16">
       {/* Header */}
-      <div className="border-b border-border px-4 py-3 flex items-center gap-3">
+      <div className="border-b border-border py-3 flex items-center gap-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem", paddingLeft: "3rem", paddingRight: "3rem" }}>
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1 text-primary text-sm hover:underline shrink-0"
@@ -711,7 +711,7 @@ export function JumpDetailClient({
       </div>
 
       {/* Stats strip */}
-      <div className="flex gap-2 px-4 py-3 overflow-x-auto no-scrollbar">
+      <div className="flex gap-2 py-3 overflow-x-auto no-scrollbar" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem", paddingLeft: "3rem", paddingRight: "3rem" }}>
         <StatChip
           label="Exit Alt"
           value={alt(jump.exit_altitude_m, units)}
@@ -892,7 +892,7 @@ export function JumpDetailClient({
 
       {/* Telemetry chart strip */}
       {track.length > 0 && (
-        <div className="mx-4 mt-3 relative">
+        <div className="mt-3 relative" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
           <TelemetryChart
             points={track}
             cursor={cursor}
@@ -907,7 +907,7 @@ export function JumpDetailClient({
 
       {/* Scrubber / playback */}
       {track.length > 0 && (
-        <div className="mx-4 mt-3 border border-border rounded-lg overflow-hidden">
+        <div className="mt-3 border border-border rounded-lg overflow-hidden" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
           <div className="relative h-1.5 bg-muted">
             {scrubberPhaseSegments.map((r, i) => (
               <div
@@ -1049,7 +1049,7 @@ export function JumpDetailClient({
 
       {/* Analysis */}
       {analysis && (
-        <div className="mx-4 mt-3 border border-border rounded-lg p-4">
+        <div className="mt-3 border border-border rounded-lg p-4" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
           <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
             Jump Analysis
           </h3>
@@ -1122,12 +1122,12 @@ export function JumpDetailClient({
       )}
 
       {/* Weather */}
-      <div className="mx-4 mt-3">
+      <div className="mt-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
         <WeatherCard weather={weather} loading={false} units={units} />
       </div>
 
       {/* Discipline & Notes */}
-      <div className="mx-4 mt-3 border border-border rounded-lg p-4 flex flex-col gap-3">
+      <div className="mt-3 border border-border rounded-lg p-4 flex flex-col gap-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
             Discipline
@@ -1215,7 +1215,7 @@ export function JumpDetailClient({
       </div>
 
       {/* Delete */}
-      <div className="mx-4 mt-3">
+      <div className="mt-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
         <Button
           variant="ghost"
           className="w-full text-destructive hover:bg-destructive/10"
