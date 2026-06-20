@@ -24,15 +24,25 @@ export default async function DeviceLogDetailPage({
 }) {
   const { deviceId, logId } = await params;
   const logIdNum = parseInt(logId, 10);
-  if (Number.isNaN(logIdNum)) notFound();
+  const deviceIdNum = parseInt(deviceId, 10);
+  if (Number.isNaN(logIdNum) || Number.isNaN(deviceIdNum)) notFound();
 
   const supabase = await createServerClient();
+
+  // Resolve the Dekunu device_id to the internal DB id.
+  const { data: dev } = (await supabase
+    .from("devices")
+    .select("id")
+    .eq("device_id", deviceIdNum)
+    .maybeSingle()) as { data: { id: number } | null };
+
+  if (!dev) notFound();
 
   const { data } = (await supabase
     .from("system_logs")
     .select("id, device_id, log_source, log_number, content, uploaded_at")
     .eq("id", logIdNum)
-    .eq("device_id", parseInt(deviceId, 10))
+    .eq("device_id", dev.id)
     .single()) as { data: LogRow | null };
 
   if (!data) notFound();

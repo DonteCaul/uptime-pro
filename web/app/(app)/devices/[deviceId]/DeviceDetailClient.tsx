@@ -39,13 +39,13 @@ export function DeviceDetailClient({
   jumps,
   logs,
   serverUnits,
-  deviceInternalId,
+  deviceUrlId,
 }: {
   tab: Tab;
   jumps: JumpRow[];
   logs: LogRow[];
   serverUnits: UnitSystem;
-  deviceInternalId: number;
+  deviceUrlId: number;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(tab);
   const units = useUnits(serverUnits);
@@ -53,7 +53,7 @@ export function DeviceDetailClient({
 
   function switchTab(t: Tab) {
     setActiveTab(t);
-    router.replace(`/devices/${deviceInternalId}?tab=${t}`, { scroll: false });
+    router.replace(`/devices/${deviceUrlId}?tab=${t}`, { scroll: false });
   }
 
   return (
@@ -172,7 +172,7 @@ export function DeviceDetailClient({
               {logs.map((log) => (
                 <Link
                   key={log.id}
-                  href={`/devices/${deviceInternalId}/logs/${log.id}`}
+                  href={`/devices/${deviceUrlId}/logs/${log.id}`}
                   className="flex items-center justify-between px-4 py-3 hover:bg-accent/50 transition-colors border-b border-border last:border-0"
                 >
                   <div className="min-w-0">

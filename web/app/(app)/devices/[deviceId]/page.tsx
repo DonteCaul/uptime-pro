@@ -119,7 +119,7 @@ export default async function DeviceDetailPage({
         jumps={jumps}
         logs={logs}
         serverUnits={units}
-        deviceInternalId={device.id}
+        deviceUrlId={deviceId}
       />
 
       <Button variant="ghost" asChild>
