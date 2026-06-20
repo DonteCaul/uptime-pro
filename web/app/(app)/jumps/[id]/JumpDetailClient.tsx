@@ -234,6 +234,7 @@ export function JumpDetailClient({
     if (!valid.length) return;
 
     let cancelled = false;
+    let cleanupFn: (() => void) | undefined;
 
     (async () => {
       const mapboxgl = (await import("mapbox-gl")).default;
@@ -272,7 +273,7 @@ export function JumpDetailClient({
     );
 
     const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
+      container: mapContainerRef.current!,
       style: "mapbox://styles/mapbox/satellite-streets-v12",
       bounds,
       fitBoundsOptions: { padding: 40 },
@@ -418,14 +419,16 @@ export function JumpDetailClient({
 
       setMapReady(true);
 
-      return () => {
+      cleanupFn = () => {
         map.remove();
         mapRef.current = null;
         markerRef.current = null;
       };
+    }); // end map.on("load")
+
     })();
 
-    return () => { cancelled = true; };
+    return () => { cancelled = true; cleanupFn?.(); };
   }, [track]);
 
   // 3D terrain toggle.

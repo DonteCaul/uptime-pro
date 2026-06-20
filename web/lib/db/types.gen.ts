@@ -549,6 +549,29 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      jump_with_neighbors: {
+        Args: { p_jump_id: number }
+        Returns: {
+          id: number
+          filename: string | null
+          jumped_at: string | null
+          exit_altitude_m: number | null
+          deployment_altitude_m: number | null
+          freefall_duration_s: number | null
+          max_freefall_speed_ms: number | null
+          canopy_duration_s: number | null
+          climb_duration_s: number | null
+          jump_number: number | null
+          exit_lat: number | null
+          exit_lon: number | null
+          notes: string | null
+          discipline: string | null
+          is_public: boolean | null
+          row_count: number | null
+          prev_id: number | null
+          next_id: number | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

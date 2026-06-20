@@ -68,7 +68,7 @@ async function getJumpWithNeighbors(
   const row = data[0];
   return {
     id: row.id,
-    filename: row.filename,
+    filename: row.filename as string,
     jumped_at: row.jumped_at,
     exit_altitude_m: row.exit_altitude_m,
     deployment_altitude_m: row.deployment_altitude_m,
@@ -81,7 +81,7 @@ async function getJumpWithNeighbors(
     exit_lon: row.exit_lon,
     notes: row.notes,
     discipline: row.discipline,
-    is_public: row.is_public,
+    is_public: row.is_public ?? false,
     row_count: row.row_count,
     prev_id: row.prev_id,
     next_id: row.next_id,

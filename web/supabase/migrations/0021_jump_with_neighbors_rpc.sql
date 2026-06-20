@@ -56,6 +56,7 @@ AS $$
     FROM public.jumps j
     WHERE j.jumped_at IS NOT NULL
       AND NOT j.is_plane_ride
+      AND j.user_id = auth.uid()
   ),
   windowed AS (
     SELECT *
