@@ -62,6 +62,7 @@ export default async function ProfilePage() {
           initialProfile={profile}
           initialUnits={(profile?.units as "metric" | "imperial") ?? "metric"}
           initialTheme={(profile?.theme as "light" | "dark") ?? "light"}
+          initialAltimeter="none"
         />
       }
     />

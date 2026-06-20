@@ -178,10 +178,12 @@ export function ProfileEditForm({
   initialProfile,
   initialUnits,
   initialTheme,
+  initialAltimeter,
 }: {
   initialProfile: Profile | null;
   initialUnits: "metric" | "imperial";
   initialTheme: "light" | "dark";
+  initialAltimeter: string;
 }) {
   const [form, setForm] = useState<FormState>(() => toForm(initialProfile));
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
@@ -201,7 +203,8 @@ export function ProfileEditForm({
   // ── Live settings (theme, units) ──────────────────────────────────
   const [units, setUnits] = useState<"metric" | "imperial">(initialUnits);
   const [theme, setTheme] = useState<"light" | "dark">(initialTheme);
-  const [altimeter, setAltimeter] = useState<string>("none");
+  const [altimeter, setAltimeter] = useState<string>(initialAltimeter);
+  const [showDekunuPopup, setShowDekunuPopup] = useState(false);
   const [, startPrefTransition] = useTransition();
 
   // Sync theme to the DOM + localStorage immediately (prevents flash).
@@ -445,27 +448,45 @@ export function ProfileEditForm({
       {/* Altimeter selector — clean row, separate from avatar */}
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-foreground">Altimeter</p>
-        <select
-          value={altimeter}
-          onChange={(e) => setAltimeter(e.target.value)}
-          className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-        >
-          <option value="none">Select Altimeter…</option>
-          <option value="dekunu">Dekunu</option>
-        </select>
+        <div className="flex items-center gap-2">
+          {altimeter === "dekunu" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => setShowDekunuPopup(true)}
+            >
+              <Download size={13} className="mr-1" />
+              Setup Instructions
+            </Button>
+          )}
+          <select
+            value={altimeter}
+            onChange={(e) => {
+              const next = e.target.value;
+              setAltimeter(next);
+              if (next === "dekunu") setShowDekunuPopup(true);
+            }}
+            className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          >
+            <option value="none">Select Altimeter…</option>
+            <option value="dekunu">Dekunu</option>
+          </select>
+        </div>
       </div>
 
       {/* Dekunu popup */}
-      {altimeter === "dekunu" && (
+      {showDekunuPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop — clicking it closes the popup */}
-          <div className="absolute inset-0 bg-black/40" onClick={() => setAltimeter("none")} />
+          {/* Backdrop — clicking it closes the popup without reverting the selection */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDekunuPopup(false)} />
           <Card className="relative z-10 w-full max-w-md mx-4 shadow-xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base">Dekunu Dropzones Setup</CardTitle>
               <button
                 type="button"
-                onClick={() => setAltimeter("none")}
+                onClick={() => setShowDekunuPopup(false)}
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Close"
               >
