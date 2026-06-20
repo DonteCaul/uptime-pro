@@ -11,7 +11,6 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
-import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { alt, speed, type UnitSystem } from "@/lib/units";
@@ -325,35 +324,20 @@ function DropzoneCard({
 export function JumpsTabsClient({
   tab,
   units: serverUnits,
+  initialJumps,
 }: {
   tab: "dropzone" | "map";
   units: UnitSystem;
+  initialJumps: JumpRow[];
 }) {
   const units = useUnits(serverUnits);
-  const [allJumps, setAllJumps] = useState<JumpRow[] | null>(null);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [geocoding, setGeocoding] = useState(false);
-
-  // Fetch up to 1000 jumps for the current user (not global).
-  useEffect(() => {
-    const supabase = createBrowserSupabaseClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase
-        .from("jumps")
-        .select(
-          "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, jump_number, exit_lat, exit_lon, dz_lat, dz_lon",
-        )
-        .eq("user_id", user.id)
-        .order("jumped_at", { ascending: false, nullsFirst: false })
-        .range(0, 999)
-        .then(({ data }) => setAllJumps((data ?? []) as JumpRow[]));
-    });
-  }, []);
+  const allJumps = initialJumps;
 
   // Dropzone tab: cluster + geocode once jumps load.
   useEffect(() => {
-    if (tab !== "dropzone" || !allJumps) return;
+    if (tab !== "dropzone" || !allJumps.length) return;
     let cancelled = false;
 
     (async () => {
@@ -398,12 +382,6 @@ export function JumpsTabsClient({
       cancelled = true;
     };
   }, [allJumps, tab]);
-
-  if (!allJumps) {
-    return (
-      <div className="text-center text-muted-foreground py-10">Loading…</div>
-    );
-  }
 
   if (tab === "map") {
     return (

@@ -14,9 +14,11 @@ const TABS: { id: Tab; label: string }[] = [
 export function ProfileClient({
   jumpCount,
   editForm,
+  initialJumps,
 }: {
   jumpCount: number;
   editForm: React.ReactNode;
+  initialJumps: { id: number; filename: string; jumped_at: string | null; exit_altitude_m: number | null; freefall_duration_s: number | null; max_freefall_speed_ms: number | null }[];
 }) {
   const [tab, setTab] = useState<Tab>("profile");
 
@@ -57,7 +59,7 @@ export function ProfileClient({
         ))}
       </div>
 
-      {tab === "profile" ? editForm : <ManageJumps />}
+      {tab === "profile" ? editForm : <ManageJumps initialJumps={initialJumps} />}
     </div>
   );
 }

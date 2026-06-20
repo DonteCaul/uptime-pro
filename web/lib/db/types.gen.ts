@@ -572,6 +572,22 @@ export type Database = {
           next_id: number | null
         }[]
       }
+      device_jump_counts: {
+        Args: { p_user_id: string }
+        Returns: {
+          device_id: number
+          jump_count: number
+        }[]
+      }
+      public_jump_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          total_freefall_s: number | null
+          highest_exit_m: number | null
+          fastest_freefall_ms: number | null
+          first_jump: string | null
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

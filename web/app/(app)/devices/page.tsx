@@ -41,17 +41,15 @@ export default async function DevicesPage() {
   };
   const devices = deviceRows ?? [];
 
-  // 2. Jump counts per device (admin client for the join).
+  // 2. Jump counts per device — single aggregate query via admin RPC.
   const admin = createAdminClient();
-  const { data: counts } = await admin
-    .from("jumps")
-    .select("device_id")
-    .eq("user_id", user.id);
+  const { data: countRows } = await admin.rpc("device_jump_counts", {
+    p_user_id: user.id,
+  });
 
   const countMap = new Map<number, number>();
-  for (const row of counts ?? []) {
-    const did = (row as { device_id: number | null }).device_id;
-    if (did != null) countMap.set(did, (countMap.get(did) ?? 0) + 1);
+  for (const row of ((countRows ?? []) as unknown[]) as { device_id: number; jump_count: bigint }[]) {
+    if (row.device_id != null) countMap.set(row.device_id, Number(row.jump_count));
   }
 
   return (

@@ -12,6 +12,20 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 20;
 
+interface MapJumpRow {
+  id: number;
+  filename: string;
+  jumped_at: string | null;
+  exit_altitude_m: number | null;
+  freefall_duration_s: number | null;
+  max_freefall_speed_ms: number | null;
+  jump_number: number | null;
+  exit_lat: number | null;
+  exit_lon: number | null;
+  dz_lat: number | null;
+  dz_lon: number | null;
+}
+
 export default async function JumpsPage({
   searchParams,
 }: {
@@ -51,6 +65,16 @@ export default async function JumpsPage({
     .order("jumped_at", { ascending: false, nullsFirst: false })
     .range(offset, offset + PAGE_SIZE - 1);
   const jumps = (pageJumps ?? []) as JumpRow[];
+
+  // Fetch up to 1000 jumps for the dropzone/map tabs (server-side).
+  const { data: mapJumps } = await supabase
+    .from("jumps")
+    .select(
+      "id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms, jump_number, exit_lat, exit_lon, dz_lat, dz_lon",
+    )
+    .eq("user_id", userId!)
+    .order("jumped_at", { ascending: false, nullsFirst: false })
+    .range(0, 999);
 
   const tabs = [
     { id: "all" as const, label: "All Jumps" },
@@ -151,7 +175,7 @@ export default async function JumpsPage({
 
       {/* Dropzone + Map tabs are client-rendered (need all jumps + interactivity). */}
       {(tab === "dropzone" || tab === "map") && (
-        <JumpsTabsClient tab={tab} units={units} />
+        <JumpsTabsClient tab={tab} units={units} initialJumps={(mapJumps ?? []) as MapJumpRow[]} />
       )}
     </div>
   );

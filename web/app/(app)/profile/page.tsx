@@ -54,9 +54,18 @@ export default async function ProfilePage() {
     .select("id", { count: "exact", head: true })
     .eq("user_id", user!.id);
 
+  // Fetch up to 1000 jumps for the Manage Jumps tab (server-side).
+  const { data: manageJumps } = await supabase
+    .from("jumps")
+    .select("id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms")
+    .eq("user_id", user!.id)
+    .order("jumped_at", { ascending: false, nullsFirst: false })
+    .range(0, 999);
+
   return (
     <ProfileClient
       jumpCount={jumpCount ?? 0}
+      initialJumps={(manageJumps ?? []) as { id: number; filename: string; jumped_at: string | null; exit_altitude_m: number | null; freefall_duration_s: number | null; max_freefall_speed_ms: number | null }[]}
       editForm={
         <ProfileEditForm
           initialProfile={profile}

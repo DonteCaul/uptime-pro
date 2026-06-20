@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Trash2, Loader2, Check } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -60,34 +60,15 @@ function Checkbox({
   );
 }
 
-export function ManageJumps() {
-  const [jumps, setJumps] = useState<JumpRow[]>([]);
-  const [loading, setLoading] = useState(true);
+export function ManageJumps({
+  initialJumps,
+}: {
+  initialJumps: JumpRow[];
+}) {
+  const [jumps, setJumps] = useState<JumpRow[]>(initialJumps);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [deletedCount, setDeletedCount] = useState<number | null>(null);
-
-  const fetchJumps = useCallback(async () => {
-    const supabase = createBrowserSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("jumps")
-      .select("id, filename, jumped_at, exit_altitude_m, freefall_duration_s, max_freefall_speed_ms")
-      .eq("user_id", user.id)
-      .order("jumped_at", { ascending: false, nullsFirst: false })
-      .range(0, 999);
-
-    setJumps((data as JumpRow[]) ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void fetchJumps();
-  }, [fetchJumps]);
 
   const allSelected = jumps.length > 0 && selected.size === jumps.length;
   const noneSelected = selected.size === 0;
@@ -139,14 +120,6 @@ export function ManageJumps() {
       // Clear success message after 3 seconds.
       setTimeout(() => setDeletedCount(null), 3000);
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-10">
-        <Loader2 size={20} className="animate-spin text-muted-foreground" />
-      </div>
-    );
   }
 
   if (jumps.length === 0) {

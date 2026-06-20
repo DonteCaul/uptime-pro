@@ -3,10 +3,9 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { encodeJumpId } from "@/lib/slug";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 
-type MapInstance = InstanceType<typeof mapboxgl.Map>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MapInstance = any;
 
 // The bundled @types/mapbox-gl has a known quirk where queryRenderedFeatures
 // returns a GeoJSONFeature type that's missing properties/geometry accessors
@@ -54,10 +53,18 @@ export default function JumpMap({ jumps, theme }: JumpMapProps) {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!containerRef.current || !token) return;
 
-    mapboxgl.accessToken = token;
+    let cancelled = false;
+    let cleanupFn: (() => void) | undefined;
 
-    const map = new mapboxgl.Map({
-        container: containerRef.current,
+    (async () => {
+      const mapboxgl = (await import("mapbox-gl")).default;
+      await import("mapbox-gl/dist/mapbox-gl.css");
+      if (cancelled) return;
+
+      mapboxgl.accessToken = token;
+
+      const map = new mapboxgl.Map({
+        container: containerRef.current!,
         style:
           theme === "dark"
             ? "mapbox://styles/mapbox/satellite-streets-v12"
@@ -232,12 +239,15 @@ export default function JumpMap({ jumps, theme }: JumpMapProps) {
             map.getCanvas().style.cursor = "";
           });
         });
-      });
+      }); // end map.on("load")
 
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
+      cleanupFn = () => {
+        map.remove();
+        mapRef.current = null;
+      };
+    })();
+
+    return () => { cancelled = true; cleanupFn?.(); };
   }, [jumps, theme]);
 
   if (!process.env.NEXT_PUBLIC_MAPBOX_TOKEN) {

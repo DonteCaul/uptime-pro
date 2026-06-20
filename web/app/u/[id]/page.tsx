@@ -95,7 +95,7 @@ export default async function PublicProfilePage({
 
   const recentJumps = (userJumps ?? []) as RecentJump[];
 
-  // Compute stats from a count + aggregates (public jumps only).
+  // Aggregate stats across ALL public jumps via a single RPC (not just the 10 most recent).
   const { count } = await supabase
     .from("jumps")
     .select("id", { count: "exact", head: true })
@@ -103,25 +103,18 @@ export default async function PublicProfilePage({
     .eq("is_public", true)
     .neq("is_plane_ride", true);
 
-  const totalFreefall = recentJumps.reduce(
-    (s, j) => s + (Number(j.freefall_duration_s) || 0),
-    0,
-  );
-  const highestExit = recentJumps.reduce(
-    (m, j) => Math.max(m, Number(j.exit_altitude_m) || 0),
-    0,
-  );
-  const fastest = recentJumps.reduce(
-    (m, j) => Math.max(m, Number(j.max_freefall_speed_ms) || 0),
-    0,
-  );
+  const { data: statsData } = await supabase.rpc("public_jump_stats", {
+    p_user_id: id,
+  });
+
+  const row = statsData?.[0];
 
   const stats: Stats = {
     total_jumps: count ?? 0,
-    total_freefall_s: totalFreefall,
-    highest_exit_m: highestExit,
-    fastest_freefall_ms: fastest,
-    first_jump: null,
+    total_freefall_s: row ? Number(row.total_freefall_s ?? 0) : 0,
+    highest_exit_m: row ? Number(row.highest_exit_m ?? 0) : 0,
+    fastest_freefall_ms: row ? Number(row.fastest_freefall_ms ?? 0) : 0,
+    first_jump: row?.first_jump ?? null,
     last_jump: recentJumps[0]?.jumped_at ?? null,
   };
 
