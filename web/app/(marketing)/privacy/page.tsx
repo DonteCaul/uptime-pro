@@ -27,9 +27,9 @@ export default function PrivacyPage() {
           plaintext.
         </li>
         <li>
-          <strong>OAuth information:</strong> when you sign in with Google or
-          Facebook, we receive your name and email address from that provider. We
-          do not store or have access to your social media passwords.
+          <strong>OAuth information:</strong> when you sign in with Google, we
+          receive your name and email address from that provider. We do not store
+          or have access to your social media passwords.
         </li>
         <li>
           <strong>Profile details:</strong> optional fields such as home
@@ -139,19 +139,6 @@ export default function PrivacyPage() {
             className="text-primary"
           >
             Google Privacy Policy
-          </a>
-          .
-        </li>
-        <li>
-          <strong>Facebook Login:</strong> used for optional sign-in. We receive
-          only your name and email. Governed by the{" "}
-          <a
-            href="https://www.facebook.com/privacy/policy/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary"
-          >
-            Facebook Data Policy
           </a>
           .
         </li>

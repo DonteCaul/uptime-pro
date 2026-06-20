@@ -1,0 +1,1876 @@
+{
+  "dropzone": [
+    {
+      "id": 2650,
+      "name": "Pegasus Skydive Center",
+      "lat": "40.933631",
+      "lon": "-75.354108",
+      "tz": "-4",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 931,
+      "name": "Sky's The Limit",
+      "lat": "41.035566",
+      "lon": "-75.156134",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 944,
+      "name": "Skydive Crosskeys",
+      "lat": "39.706781",
+      "lon": "-75.032382",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 2371,
+      "name": "Skydive East Coast",
+      "lat": "39.667419",
+      "lon": "-74.312248",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 2156,
+      "name": "Wildwood Beach Boogie",
+      "lat": "39.008283",
+      "lon": "-74.907953",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 2301,
+      "name": "Skydive Philadelphia",
+      "lat": "40.391715",
+      "lon": "-75.287211",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 884,
+      "name": "Eastern Shore Skydiving",
+      "lat": "39.00199",
+      "lon": "-75.681759",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 2502,
+      "name": "Garden State Skydiving",
+      "lat": "40.587422",
+      "lon": "-75.016345",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 2486,
+      "name": "Baltimore Skydive",
+      "lat": "39.56381",
+      "lon": "-76.206042",
+      "tz": "-4",
+      "magDec": -11,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 2497,
+      "name": "Skydive Lancaster",
+      "lat": "40.040783",
+      "lon": "-76.204545",
+      "tz": "-4",
+      "magDec": -11,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 2379,
+      "name": "Skydive Chesapeake",
+      "lat": "38.968232",
+      "lon": "-75.870549",
+      "tz": "-4",
+      "magDec": -11,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 885,
+      "name": "Skydive Delmarva",
+      "lat": "38.541645",
+      "lon": "-75.591484",
+      "tz": "-4",
+      "magDec": -12,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 906,
+      "name": "Skydive City - Z-hills",
+      "lat": "28.219979",
+      "lon": "-82.150744",
+      "tz": "-4",
+      "magDec": -6,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10000,
+      "name": "Skydive Cherokee",
+      "lat": "35.66138",
+      "lon": "-95.35850",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10001,
+      "name": "Air Bears - Skydiving Club at Berkeley",
+      "lat": "38.5793889",
+      "lon": "-121.8569444",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10002,
+      "name": "Skydive NEPA",
+      "lat": "41.58670",
+      "lon": "-75.75677",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10003,
+      "name": "Michigan State University Skydiving Club",
+      "lat": "42.16967",
+      "lon": "-84.26280",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10004,
+      "name": "Porterville Training Facility",
+      "lat": "36.03048",
+      "lon": "-119.05868",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10005,
+      "name": "Complete Parachute Solutions Bishop",
+      "lat": "33.75565",
+      "lon": "-111.44427",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10006,
+      "name": "Jumptown/MSPC, Inc.",
+      "lat": "42.5701264",
+      "lon": "-72.2886103",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10007,
+      "name": "Pepperell Skydiving Center",
+      "lat": "42.69861944",
+      "lon": "-71.5500556",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10008,
+      "name": "Skydive New England",
+      "lat": "43.3750814",
+      "lon": "-70.9292286",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10009,
+      "name": "Malone Parachute Club",
+      "lat": "44.9402808",
+      "lon": "-73.0974600",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10010,
+      "name": "Vermont Skydiving Adventures Inc",
+      "lat": "44.0686667",
+      "lon": "-73.3734444",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10011,
+      "name": "Connecticut Parachutists, Inc.",
+      "lat": "41.9254167",
+      "lon": "-72.4571111",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10012,
+      "name": "Blue Sky Ranch",
+      "lat": "41.674253",
+      "lon": "-74.150233",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10013,
+      "name": "Rochester Skydivers",
+      "lat": "42.74169",
+      "lon": "-78.05166",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10014,
+      "name": "Maytown Sport Parachute Club",
+      "lat": "40.0922067",
+      "lon": "-76.5743553",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10015,
+      "name": "Skydive Cross Keys",
+      "lat": "39.7054758",
+      "lon": "-75.0330031",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10016,
+      "name": "Skydive Orange, Inc.",
+      "lat": "38.24907",
+      "lon": "-78.04813",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10017,
+      "name": "Skydive Suffolk",
+      "lat": "36.679917516855774",
+      "lon": "-76.60902954232895",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10018,
+      "name": "Skydive Carolina!",
+      "lat": "34.7893333",
+      "lon": "-81.1957778",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10019,
+      "name": "Flying Tigers SPC",
+      "lat": "34.49354",
+      "lon": "-82.71126",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10020,
+      "name": "Skydive Atlanta",
+      "lat": "32.95181",
+      "lon": "-84.26261",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10021,
+      "name": "Skydive DeLand, Inc.",
+      "lat": "29.06373",
+      "lon": "-81.27934",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10022,
+      "name": "Skydive Sebastian",
+      "lat": "27.8132347",
+      "lon": "-80.4955841",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10023,
+      "name": "Skydive Spaceland-Clewiston",
+      "lat": "26.735626406293708",
+      "lon": "-81.04807276482651",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10024,
+      "name": "Aerohio Skydiving Center",
+      "lat": "40.89825",
+      "lon": "-82.25664",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10025,
+      "name": "Alliance Sport Parachute Club/Skydive Rick's",
+      "lat": "40.9006164",
+      "lon": "-80.5553478",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10026,
+      "name": "Canton Air Sports",
+      "lat": "40.97406",
+      "lon": "-81.100708",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10027,
+      "name": "Skydive Tecumseh",
+      "lat": "42.16967",
+      "lon": "-84.26280",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10028,
+      "name": "Des Moines Skydivers",
+      "lat": "41.29670",
+      "lon": "-93.11054",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10029,
+      "name": "Skydive Milwaukee/Sky Knights Sport Parachute Club",
+      "lat": "42.7971667",
+      "lon": "-88.3726111",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10030,
+      "name": "Seven Hills Skydivers of Madison, WI",
+      "lat": "43.2608",
+      "lon": "-89.067766",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10031,
+      "name": "Skydive Wissota / Indianhead SPC",
+      "lat": "44.933514",
+      "lon": "-91.273127",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10032,
+      "name": "Skydive Adventures",
+      "lat": "43.62300",
+      "lon": "-96.21443",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10033,
+      "name": "Skydive Fargo!, Inc.",
+      "lat": "46.900554",
+      "lon": "-96.91658",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10034,
+      "name": "Skydive Chicago, Inc.",
+      "lat": "41.3997778",
+      "lon": "-88.7939167",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10035,
+      "name": "Mid-America Sport Parachute Club",
+      "lat": "39.537115",
+      "lon": "-89.326081",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10036,
+      "name": "Kansas State University Parachute Club",
+      "lat": "-99.67321858480639",
+      "lon": "32.422361324006886",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10037,
+      "name": "Lincoln Sport Parachute Club",
+      "lat": "40.8675006",
+      "lon": "-96.1100100",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10038,
+      "name": "Skydive East Texas",
+      "lat": "32.529522",
+      "lon": "-94.968145",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10039,
+      "name": "Skydive Spaceland-San Marcos",
+      "lat": "29.7682803",
+      "lon": "-97.7752789",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10040,
+      "name": "Skydive Arizona",
+      "lat": "32.80405",
+      "lon": "-111.58194",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10041,
+      "name": "Skydive Las Vegas",
+      "lat": "35.57116",
+      "lon": "-114.512689",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10042,
+      "name": "Skydive San Diego",
+      "lat": "32.63535",
+      "lon": "-116.89060",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10043,
+      "name": "Skydive Perris",
+      "lat": "33.7646389",
+      "lon": "-117.2190000",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10044,
+      "name": "Skydive Santa Barbara, LLC",
+      "lat": "34.6656194",
+      "lon": "-120.4675028",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10045,
+      "name": "Skydive Madera",
+      "lat": "36.9886111",
+      "lon": "-120.1124444",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10046,
+      "name": "Bay Area Skydiving",
+      "lat": "37.83516",
+      "lon": "-121.63264",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10047,
+      "name": "SkyDance SkyDiving",
+      "lat": "38.5793889",
+      "lon": "-121.8569444",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10048,
+      "name": "Skydive Oregon, Inc",
+      "lat": "45.1462331",
+      "lon": "-122.6175886",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10049,
+      "name": "Eugene Skydivers",
+      "lat": "43.9307500",
+      "lon": "-123.0066667",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10050,
+      "name": "Kapowsin Air Sports",
+      "lat": "47.233556",
+      "lon": "-123.147556",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10051,
+      "name": "Skydive West Plains",
+      "lat": "47.160556",
+      "lon": "-118.2902798",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10052,
+      "name": "Skydive New Mexico",
+      "lat": "34.6451978",
+      "lon": "-106.8336958",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10053,
+      "name": "Silicon Valley Skydiving",
+      "lat": "37.07866",
+      "lon": "-121.59886",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10054,
+      "name": "Skydive Iowa",
+      "lat": "41.7458317",
+      "lon": "-92.4093514",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10055,
+      "name": "Chicagoland Skydiving Center",
+      "lat": "41.8930014",
+      "lon": "-89.0782900",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10056,
+      "name": "Skydive Spaceland-Dallas",
+      "lat": "33.4542758",
+      "lon": "-96.3816494",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10057,
+      "name": "Skydive Elsinore",
+      "lat": "33.63149",
+      "lon": "-117.29576",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10058,
+      "name": "Jump Florida Skydiving",
+      "lat": "28.13834",
+      "lon": "-82.14786",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10059,
+      "name": "Skydive Ocean City",
+      "lat": "38.3104444",
+      "lon": "-75.1239722",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10060,
+      "name": "GoJump Hawaii",
+      "lat": "21.65357",
+      "lon": "-158.20630",
+      "tz": "-10",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10061,
+      "name": "Skydive Monroe",
+      "lat": "33.7825217",
+      "lon": "-83.6927992",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10062,
+      "name": "Skydive City Zephyrhills",
+      "lat": "28.2281357",
+      "lon": "-82.1559250",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10063,
+      "name": "Skydive Pennsylvania",
+      "lat": "41.1460278",
+      "lon": "-80.1677500",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10064,
+      "name": "Skydive Sussex",
+      "lat": "41.2002789",
+      "lon": "-74.6230549",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10065,
+      "name": "Ogden Skydiving Center",
+      "lat": "41.1956658",
+      "lon": "-112.0129368",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10066,
+      "name": "Mile-Hi Skydiving Center, Inc.",
+      "lat": "40.1642958",
+      "lon": "-105.1637319",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10067,
+      "name": "Skydive Space Center",
+      "lat": "28.62060",
+      "lon": "-80.83207",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10068,
+      "name": "Skydive Cincinnati",
+      "lat": "39.50527",
+      "lon": "-84.11865",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10069,
+      "name": "Skydive Indianapolis",
+      "lat": "40.27616",
+      "lon": "-86.56273",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10070,
+      "name": "Skydive Coastal Carolinas",
+      "lat": "33.9308056",
+      "lon": "-78.0733611",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10071,
+      "name": "Skydive Toledo",
+      "lat": "46.4771675",
+      "lon": "-122.8064789",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10072,
+      "name": "Skydive Palatka",
+      "lat": "29.66069",
+      "lon": "-81.68232",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10073,
+      "name": "DZONE Skydiving-Boise",
+      "lat": "43.73156",
+      "lon": "-116.51644",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10074,
+      "name": "Skydive Georgia",
+      "lat": "34.0186944",
+      "lon": "-85.1464722",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10075,
+      "name": "Skydive Miami",
+      "lat": "25.4992303",
+      "lon": "-80.5542449",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10076,
+      "name": "Skydive Twin Cities",
+      "lat": "44.96464",
+      "lon": "-92.39054",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10077,
+      "name": "Chambersburg Skydiving Center, Inc.",
+      "lat": "39.9729517",
+      "lon": "-77.6432678",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10078,
+      "name": "Skydive The Ranch",
+      "lat": "41.674253",
+      "lon": "-74.150233",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10079,
+      "name": "Skydive Utah",
+      "lat": "40.86561",
+      "lon": "-112.30278",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10080,
+      "name": "Skylark Skydive",
+      "lat": "31.12058",
+      "lon": "-97.58535",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10081,
+      "name": "Skydive Newport",
+      "lat": "41.5324397",
+      "lon": "-71.2815439",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10082,
+      "name": "Skydive Spaceland-Houston",
+      "lat": "29.3569417",
+      "lon": "-95.4594028",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10083,
+      "name": "Skydive Alabama",
+      "lat": "34.26826",
+      "lon": "-86.86099",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10084,
+      "name": "Skydive Snohomish, Inc.",
+      "lat": "47.9048669",
+      "lon": "-122.1027453",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10085,
+      "name": "Midwest Freefall Sport Parachute Club, Inc.",
+      "lat": "42.76011",
+      "lon": "-82.94137",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10086,
+      "name": "Skydive Charlevoix",
+      "lat": "45.30328",
+      "lon": "-85.26853",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10087,
+      "name": "Skydive Airtight",
+      "lat": "36.3551056",
+      "lon": "-96.0109556",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10088,
+      "name": "Skydive Mesquite",
+      "lat": "36.83376",
+      "lon": "-114.05794",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10089,
+      "name": "GoJump Las Vegas LLC",
+      "lat": "35.7682722",
+      "lon": "-115.3296378",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10090,
+      "name": "Skydive Taft",
+      "lat": "35.1417222",
+      "lon": "-119.4382222",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10091,
+      "name": "Long Island Skydiving Center",
+      "lat": "40.81533",
+      "lon": "-72.86603",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10092,
+      "name": "Skydive Moab",
+      "lat": "38.7549561",
+      "lon": "-109.7548439",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10093,
+      "name": "Sky Down Skydiving",
+      "lat": "43.6418611",
+      "lon": "-116.6357778",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10094,
+      "name": "Skydive Midwest",
+      "lat": "42.70312",
+      "lon": "-87.95587",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10095,
+      "name": "Skydive The Farm",
+      "lat": "34.0186944",
+      "lon": "-85.1464722",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10096,
+      "name": "Skydive SW Florida Club",
+      "lat": "26.96756",
+      "lon": "-81.91532",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10097,
+      "name": "SEMO Skydiving",
+      "lat": "37.062375",
+      "lon": "-89.221153",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10098,
+      "name": "Skydive Danielson",
+      "lat": "41.8197406",
+      "lon": "-71.9009631",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10099,
+      "name": "Pacific Coast Skydiving",
+      "lat": "32.57162",
+      "lon": "-116.99328",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10100,
+      "name": "Capital City Skydiving",
+      "lat": "42.71449",
+      "lon": "-84.05732",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10101,
+      "name": "Oklahoma Skydiving Center",
+      "lat": "35.950028",
+      "lon": "-96.773417",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10102,
+      "name": "Sin City Skydiving",
+      "lat": " 35.77230",
+      "lon": "-115.32910",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10103,
+      "name": "Complete Parachute Solutions Tactical Training Facility",
+      "lat": "32.9359444",
+      "lon": "-111.4265278",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10104,
+      "name": "Skydive Allegan",
+      "lat": "42.5304676",
+      "lon": "-85.8237484",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10105,
+      "name": "Phoenix Skydive Center",
+      "lat": "32.9548889",
+      "lon": "-111.7668333",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10106,
+      "name": "Start Skydiving",
+      "lat": "39.53024",
+      "lon": "-84.39281",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10107,
+      "name": "Skydive San Joaquin Valley",
+      "lat": "35.09577",
+      "lon": "-119.07503",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10108,
+      "name": "West Tennessee Skydiving",
+      "lat": "35.223738",
+      "lon": "-89.1888889",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10109,
+      "name": "Skydive Kentucky",
+      "lat": "37.6860000",
+      "lon": "-85.9250278",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10110,
+      "name": "Miami Skydiving Center",
+      "lat": "25.64756371",
+      "lon": "-80.4332246",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10111,
+      "name": "NorCal Skydiving",
+      "lat": "38.7759715",
+      "lon": "-122.9924166",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10112,
+      "name": "Skydive East Tennessee",
+      "lat": "36.0125",
+      "lon": "-83.5465",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10113,
+      "name": "No Limits Skydiving - Victoria",
+      "lat": "36.959115",
+      "lon": "-78.180724",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10114,
+      "name": "Skydive Coastal California",
+      "lat": "34.20841",
+      "lon": "-119.07928",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10115,
+      "name": "Cadence Sky Sports",
+      "lat": "36.0879704",
+      "lon": "-78.3700580",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10116,
+      "name": "Skydive Palm Beach",
+      "lat": "26.7850278",
+      "lon": "-80.6933611",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10117,
+      "name": "WNY Skydiving",
+      "lat": "43.1735308",
+      "lon": "-78.2746325",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10118,
+      "name": "West Virginia Skydivers Inc",
+      "lat": "38.50448",
+      "lon": "-82.32046",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10119,
+      "name": "Skydive Northstar",
+      "lat": "44.0734639",
+      "lon": "-93.5529436",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10120,
+      "name": "DC Skydiving Center",
+      "lat": "38.59329",
+      "lon": "-77.71288",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10121,
+      "name": "Skydive Amelia Island",
+      "lat": "30.61708",
+      "lon": "-81.46777",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10122,
+      "name": "Skydive OBX",
+      "lat": "35.9189827",
+      "lon": "-75.6955357",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10123,
+      "name": "Skydive Phoenix",
+      "lat": "33.05382",
+      "lon": "-112.17687",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10124,
+      "name": "Boston Skydive Center",
+      "lat": "41.92558",
+      "lon": "-71.48468",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10125,
+      "name": "Skydive Panama City",
+      "lat": "30.84948",
+      "lon": "-85.60415",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10126,
+      "name": "Meadow Peak Skydiving",
+      "lat": "48.098079",
+      "lon": "-114.852939",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10127,
+      "name": "Skydive Central New York, LLC",
+      "lat": "43.08069",
+      "lon": "-76.53862",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10128,
+      "name": "Piedmont Skydiving",
+      "lat": "35.648312",
+      "lon": "-80.517490",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10129,
+      "name": "Skydive Baltimore",
+      "lat": "39.5668378",
+      "lon": "-76.2024028",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10130,
+      "name": "No Limits Skydiving - West Point",
+      "lat": "37.5213333",
+      "lon": "-76.7627500",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10131,
+      "name": "Skydive Key West",
+      "lat": "24.6487544",
+      "lon": "-81.5798083",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10132,
+      "name": "Chattanooga Skydiving Company",
+      "lat": "35.0606667",
+      "lon": "-85.5853056",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10133,
+      "name": "Ozarks Skydive Center",
+      "lat": "37.135314",
+      "lon": "-93.554361",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10134,
+      "name": "Out of the Blue Skydiving",
+      "lat": "39.27008",
+      "lon": "-103.66675",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10135,
+      "name": "Military Freefall Solutions Inc.",
+      "lat": "33.620833",
+      "lon": "-114.716944",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10136,
+      "name": "GoJump Oceanside",
+      "lat": "33.21715",
+      "lon": "-117.35231",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10137,
+      "name": "Skydive Long Island",
+      "lat": "40.821944",
+      "lon": "-72.866917",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10138,
+      "name": "Cleveland Skydiving Center",
+      "lat": "41.3511658",
+      "lon": "-81.0995414",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10139,
+      "name": "Skydive Chelan",
+      "lat": "47.86281",
+      "lon": "-119.94590",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10140,
+      "name": "Skydive Grand Haven",
+      "lat": "43.03441",
+      "lon": "-86.19612",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10141,
+      "name": "Alaska Skydive Center",
+      "lat": "61.5950",
+      "lon": "-149.0886",
+      "tz": "-9",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10142,
+      "name": "Skydive Tennessee",
+      "lat": "35.3800163",
+      "lon": "-86.2466896",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10143,
+      "name": "Skydive Paraclete XP",
+      "lat": "35.018664",
+      "lon": "-79.189197",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10144,
+      "name": "Skydive California",
+      "lat": "37.731247",
+      "lon": "-121.335233",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10145,
+      "name": "Pacific Northwest Skydiving Center",
+      "lat": "45.216325",
+      "lon": "-122.590084",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10146,
+      "name": "World Skydiving Center",
+      "lat": "30.28",
+      "lon": "-81.81",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10147,
+      "name": "Falcon Skydiving",
+      "lat": "39.231256",
+      "lon": "-94.800752",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10148,
+      "name": "Skydive Spaceland-Atlanta",
+      "lat": "33.976111",
+      "lon": "-85.174167",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10149,
+      "name": "Music City Skydiving",
+      "lat": "36.1118592",
+      "lon": "-87.7415797",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10150,
+      "name": "Jump TN",
+      "lat": "36.1960129",
+      "lon": "-82.8109908",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10151,
+      "name": "Skydive Central North Carolina, LLC",
+      "lat": "35.57638",
+      "lon": "-81.11370",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10152,
+      "name": "Paragon Skydive-The Grand Canyon",
+      "lat": "35.952361",
+      "lon": "-112.13638",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10153,
+      "name": "Skydive the Wasatch",
+      "lat": "39.73711",
+      "lon": "-111.86667",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10154,
+      "name": "Skydive Broncos at Western Michigan University",
+      "lat": "42.53370",
+      "lon": "-85.83048",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10155,
+      "name": "Fyrosity\u00ae",
+      "lat": "36.561483",
+      "lon": "-114.4406",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10156,
+      "name": "Skydive Puerto Rico",
+      "lat": "18.451111",
+      "lon": "-66.6755556",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10157,
+      "name": "Big Island Gravity, LLC",
+      "lat": "20.2651944",
+      "lon": "-155.8599444",
+      "tz": "-10",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10158,
+      "name": "Jump Georgia Skydiving",
+      "lat": "32.649714",
+      "lon": "-81.592373",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10159,
+      "name": "Skydive Duluth",
+      "lat": "46.68113",
+      "lon": "-92.09778",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10160,
+      "name": "Skydive Golden Gate",
+      "lat": "38.141705",
+      "lon": "-122.558082",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10161,
+      "name": "Texas Skydiving",
+      "lat": "30.4167",
+      "lon": "-96.9675",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10162,
+      "name": "Skydive Fayetteville",
+      "lat": "36.0050804",
+      "lon": "-94.1699268",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10163,
+      "name": "Skydive Buckeye",
+      "lat": "33.4204",
+      "lon": "-112.6862",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10164,
+      "name": "Skydive Yosemite",
+      "lat": "37.5108611",
+      "lon": "-120.0395278",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10165,
+      "name": "Flight Providers LLC",
+      "lat": "37.598211",
+      "lon": "-93.349496",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10166,
+      "name": "Skydive Shenandoah",
+      "lat": "38.6558",
+      "lon": "-78.7091",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10167,
+      "name": "Skydive The Gulf",
+      "lat": "30.426201",
+      "lon": "-87.536697",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10168,
+      "name": "Orange Skies Free Fall Center",
+      "lat": "40.32726",
+      "lon": "-103.80404",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10169,
+      "name": "Skydive Coastal Maine",
+      "lat": "43.463909",
+      "lon": "-70.472895",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10170,
+      "name": "Skydive Marana",
+      "lat": "32.410721",
+      "lon": " -111.220379",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10171,
+      "name": "Dallas Tandem Skydiving",
+      "lat": "32.328213",
+      "lon": "-96.667019",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10172,
+      "name": "Rattlesnake Mountain Skydiving",
+      "lat": "46.213112",
+      "lon": "-119.790771",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10173,
+      "name": "Skydive Castroville",
+      "lat": "29.34344",
+      "lon": "-98.84816",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10174,
+      "name": "Skydive STL",
+      "lat": "38.2315205",
+      "lon": "-91.1644343",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10175,
+      "name": "Skydive The Falls",
+      "lat": "43.26396",
+      "lon": "-78.96603",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10176,
+      "name": "Skydive Saratoga",
+      "lat": "43.1834072",
+      "lon": "-73.6331722",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10177,
+      "name": "Skydive Freefall Adventure LLC",
+      "lat": "44.640445",
+      "lon": "-88.218677",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10178,
+      "name": "DZONE Skydiving-Bozeman",
+      "lat": "45.88556",
+      "lon": "-111.56285",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10179,
+      "name": "Cloud Chasers",
+      "lat": "30.3444745",
+      "lon": "-89.8230271",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10180,
+      "name": "Maui Skydiving",
+      "lat": "20.795211",
+      "lon": "-156.014775",
+      "tz": "-10",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10181,
+      "name": "Colorado Mountain Skydive",
+      "lat": "38.43122",
+      "lon": "-105.11068",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10182,
+      "name": "Crystal Coast Skydiving",
+      "lat": "34.73407",
+      "lon": "-76.65439",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10183,
+      "name": "Upstate Skydiving, LLC",
+      "lat": "34.68787",
+      "lon": "-81.64131",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10184,
+      "name": "New York Tandem Skydiving",
+      "lat": "41.12946",
+      "lon": "-74.34277",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10185,
+      "name": "Blue Skies Skydiving Club",
+      "lat": "39.45981",
+      "lon": "-87.30313",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10186,
+      "name": "Central Florida Skydiving",
+      "lat": "29.0621290",
+      "lon": "-82.3700710",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10187,
+      "name": "Skydive Lake Tahoe",
+      "lat": "39.00730",
+      "lon": "-119.75553",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10188,
+      "name": "Skydive Havasu",
+      "lat": "34.56745",
+      "lon": "-114.35821",
+      "tz": "-7",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10189,
+      "name": "Just Jump Skydiving",
+      "lat": "42.565594",
+      "lon": "-75.54071",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10190,
+      "name": "Skydive Mt. Whitney",
+      "lat": "36.5906",
+      "lon": "-118.0570",
+      "tz": "-8",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10191,
+      "name": "Jump Omaha",
+      "lat": "41.5410193",
+      "lon": "-95.8873792",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10192,
+      "name": "Above the Poconos Skydivers / PA Skydive Center, Inc.",
+      "lat": "40.98842",
+      "lon": "-75.9936",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10193,
+      "name": "Skydive Front Royal",
+      "lat": "38.91906",
+      "lon": "-78.25246",
+      "tz": "-5",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    },
+    {
+      "id": 10194,
+      "name": "Paradise Valley Skydiving",
+      "lat": "35.4698",
+      "lon": "-93.4338",
+      "tz": "-6",
+      "magDec": 0,
+      "seatbeltRemoveFt": 1500
+    }
+  ]
+}
