@@ -14,15 +14,29 @@ import type { Database } from "@/lib/db/types";
  * 2. Query param `next` (from email links; may be stripped by Supabase OAuth)
  * 3. Default: `/dashboard`
  */
+
+/**
+ * Validate that a redirect path is safe (relative, same-origin).
+ * Rejects absolute URLs, protocol-relative URLs, and paths with leading //
+ * to prevent open-redirect attacks.
+ */
+function isSafeRedirect(path: string): boolean {
+  // Must start with / and NOT start with // (protocol-relative)
+  return path.startsWith("/") && !path.startsWith("//");
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
 
   // Determine where to send the user after login.
   const redirectCookie = request.cookies.get("auth-redirect")?.value;
-  const next = redirectCookie
+  const rawNext = redirectCookie
     ? decodeURIComponent(redirectCookie)
     : (searchParams.get("next") ?? "/dashboard");
+
+  // Validate redirect to prevent open-redirect attacks.
+  const next = isSafeRedirect(rawNext) ? rawNext : "/dashboard";
 
   console.log("[auth/callback] code:", !!code, "next:", next, "origin:", origin);
 

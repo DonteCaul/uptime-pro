@@ -11,17 +11,97 @@ import { createAdminClient } from "@/lib/supabase/admin";
  *
  * See: https://developers.facebook.com/docs/app-events/reference/app-events-api#data-deletion-request-callback
  */
-const CONFIRMATION_CODE = `deletion_${Date.now()}`;
+
+/**
+ * Verify a Facebook signed request (HMAC-SHA256).
+ * Facebook signs deletion callbacks with the app secret to prevent spoofing.
+ */
+function verifySignedRequest(
+  signedRequest: string,
+  appSecret: string,
+): Record<string, string> | null {
+  const [encodedSig, encodedPayload] = signedRequest.split(".");
+  if (!encodedSig || !encodedPayload) return null;
+
+  // Base64url-decode
+  const sig = Buffer.from(
+    encodedSig.replace(/-/g, "+").replace(/_/g, "/"),
+    "base64",
+  );
+  const payload = Buffer.from(
+    encodedPayload.replace(/-/g, "+").replace(/_/g, "/"),
+    "base64",
+  );
+
+  const crypto = require("crypto");
+  const expectedSig = crypto
+    .createHmac("sha256", appSecret)
+    .update(encodedPayload)
+    .digest();
+
+  if (!crypto.timingSafeEqual(sig, expectedSig)) return null;
+
+  try {
+    return JSON.parse(payload.toString("utf-8"));
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
+  const appSecret = process.env.FACEBOOK_APP_SECRET;
   const body = await request.json();
-  const userId = body.user_id;
 
-  if (!userId) {
-    return NextResponse.json(
-      { error: "Missing user_id" },
-      { status: 400 },
-    );
+  // Option 1: Signed request (standard Facebook pattern)
+  let userId: string | undefined;
+  let confirmationCode: string;
+
+  if (body.signed_request && appSecret) {
+    const payload = verifySignedRequest(body.signed_request, appSecret);
+    if (!payload) {
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 401 },
+      );
+    }
+    userId = payload.user_id;
+    confirmationCode = `deletion_${payload.user_id}_${Date.now()}`;
+  } else {
+    // Option 2: Direct user_id — require server-side auth to prevent abuse.
+    // This path is only used when called internally (not from Facebook).
+    const supabase = await createServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+    // If user_id is provided, verify the caller is an admin OR deleting themselves.
+    userId = body.user_id;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "Missing user_id" },
+        { status: 400 },
+      );
+    }
+    // Non-admins can only delete themselves.
+    if (user.id !== userId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      if (profile?.role !== "admin") {
+        return NextResponse.json(
+          { error: "Forbidden — can only delete your own account" },
+          { status: 403 },
+        );
+      }
+    }
+    confirmationCode = `deletion_${userId}_${Date.now()}`;
   }
 
   // Request data deletion — the actual deletion is performed server-side
@@ -48,7 +128,7 @@ export async function POST(request: NextRequest) {
   // Facebook expects this response format regardless of deletion success.
   return NextResponse.json({
     url: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://next.uptime.pro"}/data-deletion?status=complete`,
-    confirmation_code: CONFIRMATION_CODE,
+    confirmation_code: confirmationCode,
   });
 }
 

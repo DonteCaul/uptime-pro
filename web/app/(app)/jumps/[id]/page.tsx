@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { createServerClient } from "@/lib/supabase/server";
 import { decodeJumpSlug } from "@/lib/slug";
 import { JumpDetailClient } from "./JumpDetailClient";
@@ -131,7 +132,10 @@ export default async function JumpDetailPage({
     try {
       const wxRes = await fetch(
         `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/weather?lat=${jump.exit_lat}&lon=${jump.exit_lon}&at=${encodeURIComponent(jump.jumped_at)}`,
-        { cache: "force-cache" },
+        {
+          cache: "force-cache",
+          headers: { Cookie: (await cookies()).toString() },
+        },
       );
       if (wxRes.ok) weather = (await wxRes.json()) as WeatherSummary;
     } catch {

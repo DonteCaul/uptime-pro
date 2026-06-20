@@ -4,8 +4,8 @@ import type { Database } from "@/lib/db/types";
 
 /**
  * Proxy (Next.js 16 successor to middleware). Runs on every request at the
- * network boundary. Refreshes the Supabase auth session and guards protected
- * routes. Mirrors the official @supabase/ssr Next.js pattern.
+ * network boundary. Refreshes the Supabase auth session, guards protected
+ * routes, and sets security headers.
  *
  * - `(app)/*` routes require a signed-in user; redirects to /login otherwise.
  * - `/login` and `/register` redirect to /dashboard if already signed in.
@@ -41,6 +41,37 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // ── Security Headers ──────────────────────────────────────────────────────
+  const isDev = process.env.NODE_ENV === "development";
+  const cspDirectives = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://api.mapbox.com",
+    "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' blob: data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com",
+    "connect-src 'self' https://*.supabase.co https://api.mapbox.com https://events.mapbox.com https://accounts.mapbox.com",
+    "frame-src 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    isDev ? "" : "upgrade-insecure-requests",
+  ].filter(Boolean).join("; ");
+
+  response.headers.set("Content-Security-Policy", cspDirectives);
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)");
+  response.headers.set("X-DNS-Prefetch-Control", "on");
+  response.headers.set("X-Download-Options", "noopen");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  if (!isDev) {
+    response.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload",
+    );
+  }
 
   const { pathname } = request.nextUrl;
   // Root path is the dashboard; everything else under the (app) group is

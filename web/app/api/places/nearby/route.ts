@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@/lib/supabase/server";
 import { readPlacesCache, writePlacesCache } from "@/lib/cache/db-cache";
 
 /**
@@ -6,6 +7,8 @@ import { readPlacesCache, writePlacesCache } from "@/lib/cache/db-cache";
  * the browser. Caches results in Postgres (30-day TTL) keyed by lat/lon
  * bucket + query, since dropzone lists rarely change. This is the PAID API,
  * so caching is critical for cost control.
+ *
+ * Requires authentication to prevent abuse of the paid Google Places quota.
  *
  * Runs four dropzone-specific queries ("skydiving dropzone",
  * "skydiving center", "parachute center", "skydive dropzone") and dedupes
@@ -30,6 +33,15 @@ export async function GET(request: NextRequest) {
   const lat = parseFloat(searchParams.get("lat") ?? "");
   const lon = parseFloat(searchParams.get("lon") ?? "");
   const radiusM = parseFloat(searchParams.get("radius") ?? "16093"); // 10 miles in meters
+
+  // Require authentication to protect the paid Google Places API quota.
+  const supabase = await createServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   if (!key) {
     console.warn("[places] GOOGLE_PLACES_KEY not configured");

@@ -7,6 +7,12 @@ import type { Database } from "@/lib/db/types";
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
 /**
+ * Fields that must NEVER be written by the user-facing updateProfile action.
+ * These are managed server-side only (admin actions, auth system, etc.).
+ */
+const PROTECTED_COLUMNS = ["id", "email", "uptime_user_id", "role"] as const;
+
+/**
  * Revalidate every route that reads the user's units/theme preference.
  * Called after any preference change so all pages reflect the new setting
  * immediately (server components cache the preference at render time).
@@ -29,6 +35,9 @@ function revalidateAllPrefRoutes() {
  *
  * RLS allows users to update only their own row, so this is safe via the
  * session-bound server client.
+ *
+ * Protected columns (id, email, uptime_user_id, role) are stripped to prevent
+ * privilege escalation.
  */
 export async function updateProfile(values: ProfileUpdate) {
   const supabase = await createServerClient();
@@ -37,9 +46,15 @@ export async function updateProfile(values: ProfileUpdate) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
+  // Strip protected columns to prevent privilege escalation.
+  const safeValues = { ...values };
+  for (const col of PROTECTED_COLUMNS) {
+    delete (safeValues as Record<string, unknown>)[col];
+  }
+
   const { error } = await supabase
     .from("profiles")
-    .update(values)
+    .update(safeValues)
     .eq("id", user.id);
 
   if (error) throw new Error(error.message);
