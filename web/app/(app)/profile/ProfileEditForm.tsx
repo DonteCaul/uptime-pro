@@ -467,6 +467,10 @@ export function ProfileEditForm({
               const next = e.target.value;
               setAltimeter(next);
               if (next === "dekunu") setShowDekunuPopup(true);
+              // Persist altimeter selection immediately.
+              startPrefTransition(() => {
+                void updateProfile({ altimeter: next });
+              });
             }}
             className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >

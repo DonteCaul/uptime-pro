@@ -367,7 +367,8 @@ export type Database = {
         Relationships: []
       }
       profiles: {
-        Row: {
+          Row: {
+          altimeter: string
           avatar_url: string | null
           bio: string | null
           burble_name: string | null
@@ -395,6 +396,7 @@ export type Database = {
           wing_load: number | null
         }
         Insert: {
+          altimeter?: string
           avatar_url?: string | null
           bio?: string | null
           burble_name?: string | null
@@ -422,6 +424,7 @@ export type Database = {
           wing_load?: number | null
         }
         Update: {
+          altimeter?: string
           avatar_url?: string | null
           bio?: string | null
           burble_name?: string | null

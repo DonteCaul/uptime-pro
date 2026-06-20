@@ -41,11 +41,11 @@ export default async function ProfilePage() {
   const { data: profile } = (await supabase
     .from("profiles")
     .select(
-      "full_name, email, uptime_user_id, bio, avatar_url, home_dz, home_dz_lat, home_dz_lon, uspa_license, uspa_member_number, burble_name, ratings, canopy_size, wing_load, rig_type, canopy_type, reserve_repack_date, is_public, units, theme",
+      "full_name, email, uptime_user_id, bio, avatar_url, home_dz, home_dz_lat, home_dz_lon, uspa_license, uspa_member_number, burble_name, ratings, canopy_size, wing_load, rig_type, canopy_type, reserve_repack_date, is_public, units, theme, altimeter",
     )
     .eq("id", user!.id)
     .single()) as {
-    data: (Profile & { units: string | null; theme: string | null }) | null;
+    data: (Profile & { units: string | null; theme: string | null; altimeter: string | null }) | null;
   };
 
   // Fetch total jump count for the tab badge.
@@ -62,7 +62,7 @@ export default async function ProfilePage() {
           initialProfile={profile}
           initialUnits={(profile?.units as "metric" | "imperial") ?? "metric"}
           initialTheme={(profile?.theme as "light" | "dark") ?? "light"}
-          initialAltimeter="none"
+          initialAltimeter={profile?.altimeter ?? "none"}
         />
       }
     />
