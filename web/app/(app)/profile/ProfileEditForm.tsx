@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useTransition, useEffect } from "react";
-import { Camera, Check, Download, Loader2, Moon, Sun, Trash2 } from "lucide-react";
+import { Camera, Check, Download, Loader2, Moon, Sun, Trash2, X } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -428,70 +428,85 @@ export function ProfileEditForm({
               onChange={handleAvatar}
             />
           </div>
-          <div className="flex items-center gap-3">
-            <div>
-              <p className="font-semibold text-foreground">
-                {form.full_name || "Jumper"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                UpTime.Pro ID #{initialProfile?.uptime_user_id ?? "—"}
-              </p>
-              {avatarUploading && (
-                <p className="text-xs text-muted-foreground mt-0.5">Uploading…</p>
-              )}
-            </div>
-            <select
-              value={altimeter}
-              onChange={(e) => setAltimeter(e.target.value)}
-              className="ml-auto h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="none">Select Altimeter…</option>
-              <option value="dekunu">Dekunu</option>
-            </select>
+          <div>
+            <p className="font-semibold text-foreground">
+              {form.full_name || "Jumper"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              UpTime.Pro ID #{initialProfile?.uptime_user_id ?? "—"}
+            </p>
+            {avatarUploading && (
+              <p className="text-xs text-muted-foreground mt-0.5">Uploading…</p>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Dekunu dropzones.json download */}
+      {/* Altimeter selector — clean row, separate from avatar */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-foreground">Altimeter</p>
+        <select
+          value={altimeter}
+          onChange={(e) => setAltimeter(e.target.value)}
+          className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="none">Select Altimeter…</option>
+          <option value="dekunu">Dekunu</option>
+        </select>
+      </div>
+
+      {/* Dekunu popup */}
       {altimeter === "dekunu" && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Dekunu Dropzones Setup</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">
-              Download the UpTime.Pro dropzones database for your Dekunu altimeter. Place the file on your device's storage at the path below:
-            </p>
-            <code className="rounded-md bg-muted px-3 py-2 text-xs font-mono text-foreground break-all">
-              DEKUNU/system/config/dropzones.json
-            </code>
-            <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
-              <li>Connect your Dekunu to your computer via USB</li>
-              <li>
-                Open the <strong>DEKUNU</strong> drive that appears
-              </li>
-              <li>Navigate into <strong>system/config/</strong></li>
-              <li>
-                Place <code className="bg-muted px-1 rounded text-xs">dropzones.json</code> in that folder (replace the existing file)
-              </li>
-              <li>Safely eject the drive — your Dekunu will load the updated dropzones list</li>
-            </ol>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-fit"
-              onClick={() => {
-                const a = document.createElement("a");
-                a.href = "/dekunu-dropzones.json";
-                a.download = "dropzones.json";
-                a.click();
-              }}
-            >
-              <Download size={14} className="mr-1.5" />
-              Download dropzones.json
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop — clicking it closes the popup */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setAltimeter("none")} />
+          <Card className="relative z-10 w-full max-w-md mx-4 shadow-xl">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base">Dekunu Dropzones Setup</CardTitle>
+              <button
+                type="button"
+                onClick={() => setAltimeter("none")}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3">
+              <p className="text-sm text-muted-foreground">
+                Download the UpTime.Pro dropzones database for your Dekunu altimeter. Place the file on your device's storage at the path below:
+              </p>
+              <code className="rounded-md bg-muted px-3 py-2 text-xs font-mono text-foreground break-all">
+                DEKUNU/system/config/dropzones.json
+              </code>
+              <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
+                <li>Connect your Dekunu to your computer via USB</li>
+                <li>
+                  Open the <strong>DEKUNU</strong> drive that appears
+                </li>
+                <li>Navigate into <strong>system/config/</strong></li>
+                <li>
+                  Place <code className="bg-muted px-1 rounded text-xs">dropzones.json</code> in that folder (replace the existing file)
+                </li>
+                <li>Safely eject the drive — your Dekunu will load the updated dropzones list</li>
+              </ol>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-fit"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = "/dekunu-dropzones.json";
+                  a.download = "dropzones.json";
+                  a.click();
+                }}
+              >
+                <Download size={14} className="mr-1.5" />
+                Download dropzones.json
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {error && (
