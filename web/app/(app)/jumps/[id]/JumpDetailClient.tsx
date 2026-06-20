@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { smoothTrack } from "@/lib/smooth";
 import {
   ChevronLeft,
@@ -151,8 +152,8 @@ function StatChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center rounded-md px-3 py-2 min-w-[80px] shrink-0 border border-border transition-colors",
-        onClick && "cursor-pointer hover:bg-accent/60 active:scale-95",
+        "border-border flex min-w-[80px] shrink-0 flex-col items-center justify-center rounded-md border px-3 py-2 transition-colors",
+        onClick && "hover:bg-accent/60 cursor-pointer active:scale-95",
       )}
       style={
         accent
@@ -163,11 +164,11 @@ function StatChip({
           : undefined
       }
     >
-      <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground leading-none mb-1">
+      <span className="text-muted-foreground mb-1 text-[9px] leading-none font-bold tracking-widest uppercase">
         {label}
       </span>
       <span
-        className="text-sm font-bold font-mono tabular-nums leading-none"
+        className="font-mono text-sm leading-none font-bold tabular-nums"
         style={accent ? { color: accent } : undefined}
       >
         {value ?? "—"}
@@ -199,11 +200,14 @@ export function JumpDetailClient({
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   // Seek to a specific row index and sync the playback time ref.
-  const seekTo = useCallback((idx: number) => {
-    const clamped = Math.max(0, Math.min(idx, track.length - 1));
-    setCursor(clamped);
-    playbackMs.current = track[clamped]?.sample_ms ?? 0;
-  }, [track]);
+  const seekTo = useCallback(
+    (idx: number) => {
+      const clamped = Math.max(0, Math.min(idx, track.length - 1));
+      setCursor(clamped);
+      playbackMs.current = track[clamped]?.sample_ms ?? 0;
+    },
+    [track],
+  );
   const [notes, setNotes] = useState(initialJump.notes ?? "");
   const [discipline, setDiscipline] = useState(initialJump.discipline ?? "");
   const [isPublic, setIsPublic] = useState(initialJump.is_public ?? true);
@@ -243,192 +247,188 @@ export function JumpDetailClient({
       if (cancelled) return;
       mapboxgl.accessToken = token;
 
-    const features: {
-      type: "Feature";
-      properties: { color: string };
-      geometry: { type: "LineString"; coordinates: [number, number][] };
-    }[] = [];
-    for (let i = 1; i < valid.length; i++) {
-      const a = valid[i - 1];
-      const b = valid[i];
-      features.push({
-        type: "Feature" as const,
-        properties: { color: PHASE_COLOR[getPhase(a)] ?? "#888" },
-        geometry: {
-          type: "LineString",
-          coordinates: [
-            [a.gps_lon!, a.gps_lat!],
-            [b.gps_lon!, b.gps_lat!],
-          ],
-        },
-      });
-    }
-
-    const bounds = valid.reduce(
-      (b, p) => b.extend([p.gps_lon!, p.gps_lat!]),
-      new mapboxgl.LngLatBounds(
-        [valid[0].gps_lon!, valid[0].gps_lat!],
-        [valid[0].gps_lon!, valid[0].gps_lat!],
-      ),
-    );
-
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current!,
-      style: "mapbox://styles/mapbox/satellite-streets-v12",
-      bounds,
-      fitBoundsOptions: { padding: 40 },
-      attributionControl: false,
-    });
-    mapRef.current = map;
-
-    map.on("load", () => {
-      map.addSource("mapbox-dem", {
-        type: "raster-dem",
-        url: "mapbox://mapbox.mapbox-terrain-dem-v1",
-        tileSize: 512,
-        maxzoom: 14,
-      });
-
-      map.addSource("track", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features },
-      });
-      map.addLayer({
-        id: "track-line",
-        type: "line",
-        source: "track",
-        paint: {
-          "line-color": ["get", "color"],
-          "line-width": 3,
-          "line-opacity": 0.9,
-        },
-      });
-
-      // ── Jump run heading indicator ──────────────────────────────────────────
-      try {
-        const climbPts = valid.filter((p) => p.device_mode === 2);
-        if (climbPts.length >= 2) {
-          const tail = climbPts.slice(-20);
-          const exitPt = tail[tail.length - 1];
-          const refPt = tail[0];
-
-          const lat1 = +refPt.gps_lat!;
-          const lon1 = +refPt.gps_lon!;
-          const lat2 = +exitPt.gps_lat!;
-          const lon2 = +exitPt.gps_lon!;
-
-          if (
-            !isNaN(lat1) &&
-            !isNaN(lon1) &&
-            !isNaN(lat2) &&
-            !isNaN(lon2)
-          ) {
-            const dLon =
-              (lon2 - lon1) * Math.cos((lat2 * Math.PI) / 180);
-            const dLat = lat2 - lat1;
-            const bearingDeg =
-              ((Math.atan2(dLon, dLat) * 180) / Math.PI + 360) % 360;
-
-            const RAD = Math.PI / 180;
-            const len = 0.036; // ~2.5 miles forward
-            const endLat = lat2 + len * Math.cos(bearingDeg * RAD);
-            const endLon = lon2 + len * Math.sin(bearingDeg * RAD);
-
-            map.addSource("jump-run", {
-              type: "geojson",
-              data: {
-                type: "Feature",
-                geometry: {
-                  type: "LineString",
-                  coordinates: [
-                    [lon2, lat2],
-                    [endLon, endLat],
-                  ],
-                },
-              },
-            });
-            map.addLayer({
-              id: "jump-run-line",
-              type: "line",
-              source: "jump-run",
-              paint: {
-                "line-color": "#facc15",
-                "line-width": 2.5,
-                "line-opacity": 0.95,
-              },
-            });
-
-            const arrowEl = document.createElement("div");
-            arrowEl.style.cssText = [
-              "width:0;height:0",
-              "border-left:7px solid transparent",
-              "border-right:7px solid transparent",
-              "border-top:16px solid #facc15",
-              "filter:drop-shadow(0 0 3px rgba(0,0,0,0.7))",
-              `transform:rotate(${bearingDeg - 180}deg)`,
-              "transform-origin:center top",
-            ].join(";");
-            new mapboxgl.Marker({ element: arrowEl, anchor: "top" })
-              .setLngLat([endLon, endLat])
-              .addTo(map);
-
-            const dot = document.createElement("div");
-            dot.style.cssText =
-              "width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid rgba(0,0,0,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6)";
-            new mapboxgl.Marker({ element: dot, anchor: "center" })
-              .setLngLat([lon2, lat2])
-              .addTo(map);
-
-            setJumpRunBearing(Math.round(bearingDeg));
-          }
-        }
-      } catch (err) {
-        console.error("Jump run indicator error:", err);
-      }
-
-      try {
-        map.addLayer({
-          id: "sky",
-          type: "sky",
-          paint: {
-            "sky-type": "atmosphere",
-            "sky-atmosphere-sun": [0, 90],
-            "sky-atmosphere-sun-intensity": 15,
+      const features: {
+        type: "Feature";
+        properties: { color: string };
+        geometry: { type: "LineString"; coordinates: [number, number][] };
+      }[] = [];
+      for (let i = 1; i < valid.length; i++) {
+        const a = valid[i - 1];
+        const b = valid[i];
+        features.push({
+          type: "Feature" as const,
+          properties: { color: PHASE_COLOR[getPhase(a)] ?? "#888" },
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [a.gps_lon!, a.gps_lat!],
+              [b.gps_lon!, b.gps_lat!],
+            ],
           },
         });
-      } catch (err) {
-        console.warn("Sky layer not supported:", err);
       }
 
-      new mapboxgl.Marker({ color: "#00cc55" })
-        .setLngLat([valid[0].gps_lon!, valid[0].gps_lat!])
-        .addTo(map);
-      new mapboxgl.Marker({ color: "#3399ff" })
-        .setLngLat([
-          valid[valid.length - 1].gps_lon!,
-          valid[valid.length - 1].gps_lat!,
-        ])
-        .addTo(map);
+      const bounds = valid.reduce(
+        (b, p) => b.extend([p.gps_lon!, p.gps_lat!]),
+        new mapboxgl.LngLatBounds(
+          [valid[0].gps_lon!, valid[0].gps_lat!],
+          [valid[0].gps_lon!, valid[0].gps_lat!],
+        ),
+      );
 
-      const el = document.createElement("div");
-      el.style.cssText =
-        "width:14px;height:14px;border-radius:50%;background:#FFDD00;border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.7)";
-      markerRef.current = new mapboxgl.Marker({ element: el })
-        .setLngLat([valid[0].gps_lon!, valid[0].gps_lat!])
-        .addTo(map);
+      const map = new mapboxgl.Map({
+        container: mapContainerRef.current!,
+        style: "mapbox://styles/mapbox/satellite-streets-v12",
+        bounds,
+        fitBoundsOptions: { padding: 40 },
+        attributionControl: false,
+      });
+      mapRef.current = map;
 
-      setMapReady(true);
+      map.on("load", () => {
+        map.addSource("mapbox-dem", {
+          type: "raster-dem",
+          url: "mapbox://mapbox.mapbox-terrain-dem-v1",
+          tileSize: 512,
+          maxzoom: 14,
+        });
 
-      cleanupFn = () => {
-        map.remove();
-        mapRef.current = null;
-        markerRef.current = null;
-      };
-    }); // end map.on("load")
+        map.addSource("track", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features },
+        });
+        map.addLayer({
+          id: "track-line",
+          type: "line",
+          source: "track",
+          paint: {
+            "line-color": ["get", "color"],
+            "line-width": 3,
+            "line-opacity": 0.9,
+          },
+        });
 
+        // ── Jump run heading indicator ──────────────────────────────────────────
+        try {
+          const climbPts = valid.filter((p) => p.device_mode === 2);
+          if (climbPts.length >= 2) {
+            const tail = climbPts.slice(-20);
+            const exitPt = tail[tail.length - 1];
+            const refPt = tail[0];
+
+            const lat1 = +refPt.gps_lat!;
+            const lon1 = +refPt.gps_lon!;
+            const lat2 = +exitPt.gps_lat!;
+            const lon2 = +exitPt.gps_lon!;
+
+            if (!isNaN(lat1) && !isNaN(lon1) && !isNaN(lat2) && !isNaN(lon2)) {
+              const dLon = (lon2 - lon1) * Math.cos((lat2 * Math.PI) / 180);
+              const dLat = lat2 - lat1;
+              const bearingDeg =
+                ((Math.atan2(dLon, dLat) * 180) / Math.PI + 360) % 360;
+
+              const RAD = Math.PI / 180;
+              const len = 0.036; // ~2.5 miles forward
+              const endLat = lat2 + len * Math.cos(bearingDeg * RAD);
+              const endLon = lon2 + len * Math.sin(bearingDeg * RAD);
+
+              map.addSource("jump-run", {
+                type: "geojson",
+                data: {
+                  type: "Feature",
+                  geometry: {
+                    type: "LineString",
+                    coordinates: [
+                      [lon2, lat2],
+                      [endLon, endLat],
+                    ],
+                  },
+                },
+              });
+              map.addLayer({
+                id: "jump-run-line",
+                type: "line",
+                source: "jump-run",
+                paint: {
+                  "line-color": "#facc15",
+                  "line-width": 2.5,
+                  "line-opacity": 0.95,
+                },
+              });
+
+              const arrowEl = document.createElement("div");
+              arrowEl.style.cssText = [
+                "width:0;height:0",
+                "border-left:7px solid transparent",
+                "border-right:7px solid transparent",
+                "border-top:16px solid #facc15",
+                "filter:drop-shadow(0 0 3px rgba(0,0,0,0.7))",
+                `transform:rotate(${bearingDeg - 180}deg)`,
+                "transform-origin:center top",
+              ].join(";");
+              new mapboxgl.Marker({ element: arrowEl, anchor: "top" })
+                .setLngLat([endLon, endLat])
+                .addTo(map);
+
+              const dot = document.createElement("div");
+              dot.style.cssText =
+                "width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid rgba(0,0,0,0.5);box-shadow:0 0 4px rgba(0,0,0,0.6)";
+              new mapboxgl.Marker({ element: dot, anchor: "center" })
+                .setLngLat([lon2, lat2])
+                .addTo(map);
+
+              setJumpRunBearing(Math.round(bearingDeg));
+            }
+          }
+        } catch (err) {
+          console.error("Jump run indicator error:", err);
+        }
+
+        try {
+          map.addLayer({
+            id: "sky",
+            type: "sky",
+            paint: {
+              "sky-type": "atmosphere",
+              "sky-atmosphere-sun": [0, 90],
+              "sky-atmosphere-sun-intensity": 15,
+            },
+          });
+        } catch (err) {
+          console.warn("Sky layer not supported:", err);
+        }
+
+        new mapboxgl.Marker({ color: "#00cc55" })
+          .setLngLat([valid[0].gps_lon!, valid[0].gps_lat!])
+          .addTo(map);
+        new mapboxgl.Marker({ color: "#3399ff" })
+          .setLngLat([
+            valid[valid.length - 1].gps_lon!,
+            valid[valid.length - 1].gps_lat!,
+          ])
+          .addTo(map);
+
+        const el = document.createElement("div");
+        el.style.cssText =
+          "width:14px;height:14px;border-radius:50%;background:#FFDD00;border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.7)";
+        markerRef.current = new mapboxgl.Marker({ element: el })
+          .setLngLat([valid[0].gps_lon!, valid[0].gps_lat!])
+          .addTo(map);
+
+        setMapReady(true);
+
+        cleanupFn = () => {
+          map.remove();
+          mapRef.current = null;
+          markerRef.current = null;
+        };
+      }); // end map.on("load")
     })();
 
-    return () => { cancelled = true; cleanupFn?.(); };
+    return () => {
+      cancelled = true;
+      cleanupFn?.();
+    };
   }, [track]);
 
   // 3D terrain toggle.
@@ -585,7 +585,10 @@ export function JumpDetailClient({
     let maxAlt = -Infinity;
     for (let i = 0; i < track.length; i++) {
       const a = toNum(track[i].altitude_m);
-      if (a != null && a > maxAlt) { maxAlt = a; exitIdx = i; }
+      if (a != null && a > maxAlt) {
+        maxAlt = a;
+        exitIdx = i;
+      }
     }
 
     // Deploy: first canopy-mode row after freefall
@@ -593,7 +596,10 @@ export function JumpDetailClient({
     let ffStarted = false;
     for (let i = 0; i < track.length; i++) {
       if (track[i].device_mode === 3) ffStarted = true;
-      if (ffStarted && track[i].device_mode === 4) { deployIdx = i; break; }
+      if (ffStarted && track[i].device_mode === 4) {
+        deployIdx = i;
+        break;
+      }
     }
 
     // Max speed: absolute max vertical speed during freefall
@@ -602,7 +608,10 @@ export function JumpDetailClient({
     for (let i = 0; i < track.length; i++) {
       if (track[i].device_mode !== 3) continue;
       const v = Math.abs(toNum(track[i].inst_vert_speed_ms) ?? 0);
-      if (v > maxSpeedVal) { maxSpeedVal = v; maxSpeedIdx = i; }
+      if (v > maxSpeedVal) {
+        maxSpeedVal = v;
+        maxSpeedIdx = i;
+      }
     }
 
     // Open G: peak G-force within 30-sample window around deployment
@@ -614,10 +623,16 @@ export function JumpDetailClient({
       ) / 7500;
     let peakGIdx = deployIdx >= 0 ? deployIdx : 0;
     let peakGVal = -Infinity;
-    const openEnd = Math.min(track.length, (deployIdx >= 0 ? deployIdx : 0) + 30);
+    const openEnd = Math.min(
+      track.length,
+      (deployIdx >= 0 ? deployIdx : 0) + 30,
+    );
     for (let i = deployIdx >= 0 ? deployIdx : 0; i < openEnd; i++) {
       const g = gMag(track[i]);
-      if (g > peakGVal) { peakGVal = g; peakGIdx = i; }
+      if (g > peakGVal) {
+        peakGVal = g;
+        peakGIdx = i;
+      }
     }
 
     return { exitIdx, deployIdx, maxSpeedIdx, peakGIdx };
@@ -628,7 +643,9 @@ export function JumpDetailClient({
   const phaseColor = PHASE_COLOR[phase] ?? "#888";
 
   const relMs =
-    track.length > 1 ? (track[cursor]?.sample_ms ?? 0) - (track[0].sample_ms ?? 0) : 0;
+    track.length > 1
+      ? (track[cursor]?.sample_ms ?? 0) - (track[0].sample_ms ?? 0)
+      : 0;
   const totalMs =
     track.length > 1
       ? (track[track.length - 1].sample_ms ?? 0) - (track[0].sample_ms ?? 0)
@@ -646,7 +663,11 @@ export function JumpDetailClient({
       if (m !== mode) {
         const x1 = (start / Math.max(track.length - 1, 1)) * 100;
         const x2 = ((i - 1) / Math.max(track.length - 1, 1)) * 100;
-        regions.push({ x1, width: x2 - x1, color: PHASE_COLOR[mode] ?? "#888" });
+        regions.push({
+          x1,
+          width: x2 - x1,
+          color: PHASE_COLOR[mode] ?? "#888",
+        });
         start = i;
         mode = m;
       }
@@ -670,51 +691,74 @@ export function JumpDetailClient({
       .from("jumps")
       .update({ notes, discipline: discipline || null, is_public: isPublic })
       .eq("id", jump.id);
+    posthog.capture("jump_notes_saved", {
+      jump_id: jump.id,
+      discipline: discipline || null,
+      has_notes: notes.trim().length > 0,
+      is_public: isPublic,
+    });
     setSaving(false);
   }
 
   async function handleDelete() {
     if (!confirm("Delete this jump and all its sensor data?")) return;
+    posthog.capture("jump_deleted", {
+      jump_id: jump.id,
+      discipline: jump.discipline,
+      exit_altitude_m: jump.exit_altitude_m,
+    });
     const supabase = createBrowserSupabaseClient();
     await supabase.from("jumps").delete().eq("id", jump.id);
     router.push("/jumps");
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background pb-16">
+    <div className="bg-background flex min-h-screen flex-col pb-16">
       {/* Header */}
-      <div className="border-b border-border py-3 flex items-center gap-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem", paddingLeft: "3rem", paddingRight: "3rem" }}>
+      <div
+        className="border-border flex items-center gap-3 border-b py-3"
+        style={{
+          width: "calc(100% + 6rem)",
+          marginLeft: "-3rem",
+          paddingLeft: "3rem",
+          paddingRight: "3rem",
+        }}
+      >
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1 text-primary text-sm hover:underline shrink-0"
+          className="text-primary flex shrink-0 items-center gap-1 text-sm hover:underline"
         >
           <ChevronLeft size={16} /> Back
         </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-foreground truncate">
-            {jump.jump_number != null ? `#${jump.jump_number}` : ""}{jump.jump_number != null && date ? " " : ""}{date || jump.filename}
+        <div className="min-w-0 flex-1">
+          <p className="text-foreground truncate text-sm font-bold">
+            {jump.jump_number != null ? `#${jump.jump_number}` : ""}
+            {jump.jump_number != null && date ? " " : ""}
+            {date || jump.filename}
           </p>
-          <p className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">
+          <p className="text-muted-foreground mt-0.5 truncate text-[10px] leading-none">
             {jump.filename}
           </p>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => {
-              if (jump.prev_id) window.location.href = `/jumps/${encodeJumpId(jump.prev_id)}`;
+              if (jump.prev_id)
+                window.location.href = `/jumps/${encodeJumpId(jump.prev_id)}`;
             }}
             disabled={!jump.prev_id}
-            className="p-1.5 rounded hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="hover:bg-accent rounded p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             title="Previous jump"
           >
             <ChevronLeft size={16} className="text-foreground" />
           </button>
           <button
             onClick={() => {
-              if (jump.next_id) window.location.href = `/jumps/${encodeJumpId(jump.next_id)}`;
+              if (jump.next_id)
+                window.location.href = `/jumps/${encodeJumpId(jump.next_id)}`;
             }}
             disabled={!jump.next_id}
-            className="p-1.5 rounded hover:bg-accent disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="hover:bg-accent rounded p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-30"
             title="Next jump"
           >
             <ChevronRight size={16} className="text-foreground" />
@@ -723,7 +767,15 @@ export function JumpDetailClient({
       </div>
 
       {/* Stats strip */}
-      <div className="flex gap-2 py-3 overflow-x-auto no-scrollbar" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem", paddingLeft: "3rem", paddingRight: "3rem" }}>
+      <div
+        className="no-scrollbar flex gap-2 overflow-x-auto py-3"
+        style={{
+          width: "calc(100% + 6rem)",
+          marginLeft: "-3rem",
+          paddingLeft: "3rem",
+          paddingRight: "3rem",
+        }}
+      >
         <StatChip
           label="Exit Alt"
           value={alt(jump.exit_altitude_m, units)}
@@ -792,14 +844,23 @@ export function JumpDetailClient({
 
       {/* Map */}
       <div
-        className="relative rounded-lg overflow-hidden border border-border"
-        style={{ height: 630, width: "calc(100% + 6rem)", marginLeft: "-3rem", marginRight: "-3rem" }}
+        className="border-border relative overflow-hidden rounded-lg border"
+        style={{
+          height: 630,
+          width: "calc(100% + 6rem)",
+          marginLeft: "-3rem",
+          marginRight: "-3rem",
+        }}
       >
-        <div ref={mapContainerRef} className="mapbox-no-logo" style={{ width: "100%", height: "100%" }} />
+        <div
+          ref={mapContainerRef}
+          className="mapbox-no-logo"
+          style={{ width: "100%", height: "100%" }}
+        />
 
         {mapReady && (
           <div
-            className="absolute top-2 left-2 z-10 pointer-events-none"
+            className="pointer-events-none absolute top-2 left-2 z-10"
             style={{ width: 48, height: 48 }}
           >
             <svg viewBox="0 0 48 48" width="48" height="48">
@@ -860,10 +921,10 @@ export function JumpDetailClient({
           <button
             onClick={() => setTerrain3d((v) => !v)}
             className={cn(
-              "absolute top-2 right-2 z-10 flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold shadow-lg transition-colors",
+              "absolute top-2 right-2 z-10 flex items-center gap-1 rounded px-2.5 py-1 text-xs font-semibold shadow-lg transition-colors",
               terrain3d
                 ? "bg-primary text-primary-foreground"
-                : "bg-black/60 text-white border border-white/20 hover:bg-black/80",
+                : "border border-white/20 bg-black/60 text-white hover:bg-black/80",
             )}
           >
             <Layers size={12} /> {terrain3d ? "3D" : "2D"}
@@ -871,7 +932,7 @@ export function JumpDetailClient({
         )}
 
         {mapReady && (
-          <div className="absolute bottom-2 left-2 flex gap-2 flex-wrap bg-black/60 rounded px-2 py-1">
+          <div className="absolute bottom-2 left-2 flex flex-wrap gap-2 rounded bg-black/60 px-2 py-1">
             {Object.entries(PHASE_LABEL)
               .filter(([m]) => m !== "5")
               .map(([m, label]) => (
@@ -880,7 +941,7 @@ export function JumpDetailClient({
                   className="flex items-center gap-1 text-[9px] text-white/80"
                 >
                   <span
-                    className="w-2 h-2 rounded-full"
+                    className="h-2 w-2 rounded-full"
                     style={{ background: PHASE_COLOR[+m] }}
                   />
                   {label}
@@ -896,7 +957,7 @@ export function JumpDetailClient({
         )}
 
         {!track.length && (
-          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm bg-background/80">
+          <div className="text-muted-foreground bg-background/80 absolute inset-0 flex items-center justify-center text-sm">
             {jump.row_count ? "Loading track…" : "No GPS data"}
           </div>
         )}
@@ -904,7 +965,10 @@ export function JumpDetailClient({
 
       {/* Telemetry chart strip */}
       {track.length > 0 && (
-        <div className="mt-3 relative" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
+        <div
+          className="relative mt-3"
+          style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}
+        >
           <TelemetryChart
             points={track}
             cursor={cursor}
@@ -919,8 +983,11 @@ export function JumpDetailClient({
 
       {/* Scrubber / playback */}
       {track.length > 0 && (
-        <div className="mt-3 border border-border rounded-lg overflow-hidden" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
-          <div className="relative h-1.5 bg-muted">
+        <div
+          className="border-border mt-3 overflow-hidden rounded-lg border"
+          style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}
+        >
+          <div className="bg-muted relative h-1.5">
             {scrubberPhaseSegments.map((r, i) => (
               <div
                 key={i}
@@ -939,13 +1006,13 @@ export function JumpDetailClient({
           </div>
 
           <div className="flex items-center gap-2 px-3 py-2">
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 onClick={() => {
                   seekTo(0);
                   setPlaying(false);
                 }}
-                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground p-1 transition-colors"
               >
                 <SkipBack size={14} />
               </button>
@@ -954,7 +1021,7 @@ export function JumpDetailClient({
                   if (!playing) cursorAtPlayStart.current = cursor;
                   setPlaying((p) => !p);
                 }}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-primary-foreground transition-colors shrink-0"
+                className="text-primary-foreground flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors"
                 style={{ background: phaseColor }}
               >
                 {playing ? (
@@ -968,31 +1035,31 @@ export function JumpDetailClient({
                   seekTo(track.length - 1);
                   setPlaying(false);
                 }}
-                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground hover:text-foreground p-1 transition-colors"
               >
                 <SkipForward size={14} />
               </button>
             </div>
 
-            <div className="flex flex-col min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 flex-col">
               <span
-                className="text-[9px] font-bold uppercase tracking-wider leading-none"
+                className="text-[9px] leading-none font-bold tracking-wider uppercase"
                 style={{ color: phaseColor }}
               >
                 {PHASE_LABEL[phase] ?? "Ground"}
               </span>
-              <span className="text-[10px] font-mono tabular-nums text-muted-foreground leading-tight whitespace-nowrap">
+              <span className="text-muted-foreground font-mono text-[10px] leading-tight whitespace-nowrap tabular-nums">
                 {fmtTime(relMs)} / {fmtTime(totalMs)}
               </span>
             </div>
 
-            <div className="flex gap-0.5 shrink-0">
+            <div className="flex shrink-0 gap-0.5">
               {PLAYBACK_SPEEDS.map((s) => (
                 <button
                   key={s}
                   onClick={() => setPlaybackSpeed(s)}
                   className={cn(
-                    "text-[9px] font-mono px-1.5 py-0.5 rounded transition-colors",
+                    "rounded px-1.5 py-0.5 font-mono text-[9px] transition-colors",
                     playbackSpeed === s
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground",
@@ -1014,11 +1081,11 @@ export function JumpDetailClient({
                 setPlaying(false);
                 seekTo(Number(e.target.value));
               }}
-              className="w-full accent-primary h-1"
+              className="accent-primary h-1 w-full"
             />
           </div>
 
-          <div className="grid grid-cols-4 divide-x divide-border border-t border-border">
+          <div className="divide-border border-border grid grid-cols-4 divide-x border-t">
             {[
               {
                 label: "Alt AGL",
@@ -1043,14 +1110,11 @@ export function JumpDetailClient({
                     : "—",
               },
             ].map(({ label, val }) => (
-              <div
-                key={label}
-                className="flex flex-col items-center py-2"
-              >
-                <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
+              <div key={label} className="flex flex-col items-center py-2">
+                <span className="text-muted-foreground text-[9px] tracking-wide uppercase">
                   {label}
                 </span>
-                <span className="text-xs font-bold font-mono tabular-nums text-foreground">
+                <span className="text-foreground font-mono text-xs font-bold tabular-nums">
                   {val}
                 </span>
               </div>
@@ -1061,15 +1125,18 @@ export function JumpDetailClient({
 
       {/* Analysis */}
       {analysis && (
-        <div className="mt-3 border border-border rounded-lg p-4" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+        <div
+          className="border-border mt-3 rounded-lg border p-4"
+          style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}
+        >
+          <h3 className="text-muted-foreground mb-3 text-xs font-semibold tracking-widest uppercase">
             Jump Analysis
           </h3>
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
             {analysis.avgFF != null && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Avg Freefall Spd</span>
-                <span className="font-mono font-bold text-foreground">
+                <span className="text-foreground font-mono font-bold">
                   {speed(analysis.avgFF, units)}
                 </span>
               </div>
@@ -1077,7 +1144,7 @@ export function JumpDetailClient({
             {analysis.avgGlide != null && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Avg Glide Ratio</span>
-                <span className="font-mono font-bold text-foreground">
+                <span className="text-foreground font-mono font-bold">
                   {analysis.avgGlide.toFixed(1)}:1
                 </span>
               </div>
@@ -1085,7 +1152,7 @@ export function JumpDetailClient({
             {analysis.landingKt != null && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Landing Speed</span>
-                <span className="font-mono font-bold text-foreground">
+                <span className="text-foreground font-mono font-bold">
                   {gpsSpeed(analysis.landingKt, units)}
                 </span>
               </div>
@@ -1113,9 +1180,9 @@ export function JumpDetailClient({
               </div>
             )}
             {analysis.isSwoop && (
-              <div className="col-span-2 flex items-center gap-2 mt-1 pt-2 border-t border-border">
+              <div className="border-border col-span-2 mt-1 flex items-center gap-2 border-t pt-2">
                 <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider"
+                  className="rounded px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
                   style={{
                     background: "#FFD70020",
                     color: "#FFD700",
@@ -1134,20 +1201,26 @@ export function JumpDetailClient({
       )}
 
       {/* Weather */}
-      <div className="mt-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
+      <div
+        className="mt-3"
+        style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}
+      >
         <WeatherCard weather={weather} loading={false} units={units} />
       </div>
 
       {/* Discipline & Notes */}
-      <div className="mt-3 border border-border rounded-lg p-4 flex flex-col gap-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
+      <div
+        className="border-border mt-3 flex flex-col gap-3 rounded-lg border p-4"
+        style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}
+      >
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <label className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
             Discipline
           </label>
           <select
             value={discipline}
             onChange={(e) => setDiscipline(e.target.value)}
-            className="w-full rounded-md border border-border bg-input text-foreground text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="border-border bg-input text-foreground focus:ring-ring w-full rounded-md border px-3 py-2 text-sm focus:ring-1 focus:outline-none"
           >
             <option value="">— Select discipline —</option>
             {[
@@ -1187,7 +1260,7 @@ export function JumpDetailClient({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <label className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
             Notes
           </label>
           <Textarea
@@ -1200,19 +1273,16 @@ export function JumpDetailClient({
 
         <div className="flex items-center justify-between">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <label className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
               Visibility
             </label>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-xs">
               {isPublic
                 ? "Visible on your public profile"
                 : "Private — only you can see this jump"}
             </p>
           </div>
-          <Switch
-            checked={isPublic}
-            onCheckedChange={setIsPublic}
-          />
+          <Switch checked={isPublic} onCheckedChange={setIsPublic} />
         </div>
 
         <Button
@@ -1227,10 +1297,13 @@ export function JumpDetailClient({
       </div>
 
       {/* Delete */}
-      <div className="mt-3" style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}>
+      <div
+        className="mt-3"
+        style={{ width: "calc(100% + 6rem)", marginLeft: "-3rem" }}
+      >
         <Button
           variant="ghost"
-          className="w-full text-destructive hover:bg-destructive/10"
+          className="text-destructive hover:bg-destructive/10 w-full"
           onClick={handleDelete}
         >
           Delete this jump

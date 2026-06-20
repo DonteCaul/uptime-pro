@@ -1,13 +1,18 @@
 "use client";
 
 import { useState, useRef, useTransition, useEffect } from "react";
-import { Camera, Check, Download, Loader2, Moon, Sun, Trash2, X } from "lucide-react";
+import posthog from "posthog-js";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Camera,
+  Check,
+  Download,
+  Loader2,
+  Moon,
+  Sun,
+  Trash2,
+  X,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,7 +23,6 @@ import { Badge } from "@/components/ui/badge";
 import { updateProfile, updatePreferences } from "@/lib/actions/profile";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import type { Database } from "@/lib/db/types";
-
 
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 
@@ -108,7 +112,10 @@ function RepackCountdown({ date }: { date: string }) {
   const deadline = repackDate + 180 * 24 * 60 * 60 * 1000; // 180 days
   const remainingMs = deadline - now;
   const remaining = Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
-  const ratio = Math.min(1, Math.max(0, remainingMs / (180 * 24 * 60 * 60 * 1000)));
+  const ratio = Math.min(
+    1,
+    Math.max(0, remainingMs / (180 * 24 * 60 * 60 * 1000)),
+  );
   const isOverdue = remaining === 0;
 
   // Ring geometry — radius 16, circumference ≈ 100.53
@@ -133,7 +140,12 @@ function RepackCountdown({ date }: { date: string }) {
   }
 
   return (
-    <div className="shrink-0" title={isOverdue ? "Reserve repack overdue" : `${remaining} days remaining`}>
+    <div
+      className="shrink-0"
+      title={
+        isOverdue ? "Reserve repack overdue" : `${remaining} days remaining`
+      }
+    >
       <svg width="40" height="40" viewBox="0 0 40 40" className="block">
         {/* Background track */}
         <circle
@@ -165,7 +177,11 @@ function RepackCountdown({ date }: { date: string }) {
           textAnchor="middle"
           dominantBaseline="central"
           className="fill-foreground"
-          style={{ fontSize: remaining >= 100 ? "9px" : "11px", fontWeight: 600, fontFamily: "ui-monospace, monospace" }}
+          style={{
+            fontSize: remaining >= 100 ? "9px" : "11px",
+            fontWeight: 600,
+            fontFamily: "ui-monospace, monospace",
+          }}
         >
           {isOverdue ? "!" : remaining}
         </text>
@@ -216,7 +232,9 @@ export function ProfileEditForm({
   // Keep localStorage units in sync.
   useEffect(() => {
     localStorage.setItem("uptime-units", units);
-    window.dispatchEvent(new StorageEvent("storage", { key: "uptime-units", newValue: units }));
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "uptime-units", newValue: units }),
+    );
   }, [units]);
 
   function persistTheme(next: "light" | "dark") {
@@ -252,8 +270,10 @@ export function ProfileEditForm({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
       setAvatarUrl(data.avatar_url);
+      posthog.capture("avatar_uploaded");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Avatar upload failed");
+      posthog.captureException(err);
     } finally {
       setAvatarUploading(false);
     }
@@ -286,9 +306,7 @@ export function ProfileEditForm({
     if (!trimmed) return null;
 
     // 1. Forward geocode via cached /api/geocode.
-    const geoRes = await fetch(
-      `/api/geocode?q=${encodeURIComponent(trimmed)}`,
-    );
+    const geoRes = await fetch(`/api/geocode?q=${encodeURIComponent(trimmed)}`);
     if (!geoRes.ok) return null;
     const geo = await geoRes.json();
     // The geocode route returns the Mapbox raw payload under `raw`.
@@ -334,8 +352,14 @@ export function ProfileEditForm({
 
       // String fields — only send if non-empty.
       const strFields = [
-        "full_name", "bio", "uspa_license", "uspa_member_number",
-        "burble_name", "ratings", "rig_type", "canopy_type",
+        "full_name",
+        "bio",
+        "uspa_license",
+        "uspa_member_number",
+        "burble_name",
+        "ratings",
+        "rig_type",
+        "canopy_type",
       ] as const;
       for (const k of strFields) {
         if (form[k]) body[k] = form[k] as string;
@@ -345,7 +369,9 @@ export function ProfileEditForm({
       if (form.canopy_size) body.canopy_size = Number(form.canopy_size);
       if (form.wing_load) body.wing_load = parseFloat(form.wing_load);
       if (form.reserve_repack_date) {
-        body.reserve_repack_date = new Date(form.reserve_repack_date).toISOString();
+        body.reserve_repack_date = new Date(
+          form.reserve_repack_date,
+        ).toISOString();
       }
       body.is_public = form.is_public;
 
@@ -371,8 +397,15 @@ export function ProfileEditForm({
           await updateProfile(body);
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
+          posthog.capture("profile_saved", {
+            has_bio: !!body.bio,
+            has_home_dz: !!body.home_dz,
+            has_uspa_license: !!body.uspa_license,
+            is_public: body.is_public,
+          });
         } catch (err) {
           setError(err instanceof Error ? err.message : "Save failed");
+          posthog.captureException(err);
         }
       });
     } catch (err) {
@@ -387,7 +420,7 @@ export function ProfileEditForm({
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-5 pb-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-foreground">Profile</h2>
+        <h2 className="text-foreground text-xl font-bold">Profile</h2>
         {saved && (
           <Badge variant="default" className="gap-1">
             <Check size={11} /> Saved
@@ -404,10 +437,10 @@ export function ProfileEditForm({
               <img
                 src={avatarUrl}
                 alt="avatar"
-                className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                className="border-border h-16 w-16 rounded-full border-2 object-cover"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center text-primary text-2xl font-bold">
+              <div className="bg-primary/20 border-primary/30 text-primary flex h-16 w-16 items-center justify-center rounded-full border-2 text-2xl font-bold">
                 {initials}
               </div>
             )}
@@ -415,10 +448,13 @@ export function ProfileEditForm({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={avatarUploading}
-              className="absolute bottom-0 right-0 bg-card border border-border rounded-full p-1 hover:bg-accent transition-colors"
+              className="bg-card border-border hover:bg-accent absolute right-0 bottom-0 rounded-full border p-1 transition-colors"
             >
               {avatarUploading ? (
-                <Loader2 size={12} className="text-muted-foreground animate-spin" />
+                <Loader2
+                  size={12}
+                  className="text-muted-foreground animate-spin"
+                />
               ) : (
                 <Camera size={12} className="text-muted-foreground" />
               )}
@@ -432,14 +468,14 @@ export function ProfileEditForm({
             />
           </div>
           <div>
-            <p className="font-semibold text-foreground">
+            <p className="text-foreground font-semibold">
               {form.full_name || "Jumper"}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               UpTime.Pro ID #{initialProfile?.uptime_user_id ?? "—"}
             </p>
             {avatarUploading && (
-              <p className="text-xs text-muted-foreground mt-0.5">Uploading…</p>
+              <p className="text-muted-foreground mt-0.5 text-xs">Uploading…</p>
             )}
           </div>
         </CardContent>
@@ -447,7 +483,7 @@ export function ProfileEditForm({
 
       {/* Altimeter selector — clean row, separate from avatar */}
       <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-foreground">Altimeter</p>
+        <p className="text-foreground text-sm font-medium">Altimeter</p>
         <div className="flex items-center gap-2">
           {altimeter === "dekunu" && (
             <Button
@@ -472,7 +508,7 @@ export function ProfileEditForm({
                 void updateProfile({ altimeter: next });
               });
             }}
-            className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="border-border bg-background text-foreground focus:ring-ring h-8 rounded-md border px-2 text-xs focus:ring-1 focus:outline-none"
           >
             <option value="none">Select Altimeter…</option>
             <option value="dekunu">Dekunu</option>
@@ -484,10 +520,15 @@ export function ProfileEditForm({
       {showDekunuPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           {/* Backdrop — clicking it closes the popup without reverting the selection */}
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDekunuPopup(false)} />
-          <Card className="relative z-10 w-full max-w-md mx-4 shadow-xl">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowDekunuPopup(false)}
+          />
+          <Card className="relative z-10 mx-4 w-full max-w-md shadow-xl">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base">Dekunu Dropzones Setup</CardTitle>
+              <CardTitle className="text-base">
+                Dekunu Dropzones Setup
+              </CardTitle>
               <button
                 type="button"
                 onClick={() => setShowDekunuPopup(false)}
@@ -498,22 +539,33 @@ export function ProfileEditForm({
               </button>
             </CardHeader>
             <CardContent className="flex flex-col gap-3">
-              <p className="text-sm text-muted-foreground">
-                Download the UpTime.Pro dropzones database for your Dekunu altimeter. Place the file on your device's storage at the path below:
+              <p className="text-muted-foreground text-sm">
+                Download the UpTime.Pro dropzones database for your Dekunu
+                altimeter. Place the file on your device's storage at the path
+                below:
               </p>
-              <code className="rounded-md bg-muted px-3 py-2 text-xs font-mono text-foreground break-all">
+              <code className="bg-muted text-foreground rounded-md px-3 py-2 font-mono text-xs break-all">
                 DEKUNU/system/config/dropzones.json
               </code>
-              <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
+              <ol className="text-muted-foreground list-inside list-decimal space-y-1 text-sm">
                 <li>Connect your Dekunu to your computer via USB</li>
                 <li>
                   Open the <strong>DEKUNU</strong> drive that appears
                 </li>
-                <li>Navigate into <strong>system/config/</strong></li>
                 <li>
-                  Place <code className="bg-muted px-1 rounded text-xs">dropzones.json</code> in that folder (replace the existing file)
+                  Navigate into <strong>system/config/</strong>
                 </li>
-                <li>Safely eject the drive — your Dekunu will load the updated dropzones list</li>
+                <li>
+                  Place{" "}
+                  <code className="bg-muted rounded px-1 text-xs">
+                    dropzones.json
+                  </code>{" "}
+                  in that folder (replace the existing file)
+                </li>
+                <li>
+                  Safely eject the drive — your Dekunu will load the updated
+                  dropzones list
+                </li>
               </ol>
               <Button
                 type="button"
@@ -535,7 +587,7 @@ export function ProfileEditForm({
       )}
 
       {error && (
-        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
+        <p className="text-destructive bg-destructive/10 border-destructive/30 rounded-md border px-3 py-2 text-sm">
           {error}
         </p>
       )}
@@ -572,7 +624,7 @@ export function ProfileEditForm({
           <div className="flex items-center justify-between">
             <div>
               <Label>Public Profile</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-muted-foreground mt-0.5 text-xs">
                 Show on leaderboards
               </p>
             </div>
@@ -591,8 +643,8 @@ export function ProfileEditForm({
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           {resolvedDz && (
-            <div className="flex items-center gap-2 rounded-md bg-primary/10 border border-primary/20 px-3 py-2">
-              <span className="text-xs text-primary font-medium">
+            <div className="bg-primary/10 border-primary/20 flex items-center gap-2 rounded-md border px-3 py-2">
+              <span className="text-primary text-xs font-medium">
                 📍 {resolvedDz}
               </span>
             </div>
@@ -604,7 +656,7 @@ export function ProfileEditForm({
               placeholder="e.g. Lodi, CA"
             />
           </Field>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {resolvingDz
               ? "Looking up dropzone…"
               : "Geocoded via Mapbox + matched to a known DZ via Google Places."}
@@ -691,10 +743,14 @@ export function ProfileEditForm({
                 <Input
                   type="date"
                   value={form.reserve_repack_date}
-                  onChange={(e) => update("reserve_repack_date", e.target.value)}
+                  onChange={(e) =>
+                    update("reserve_repack_date", e.target.value)
+                  }
                 />
               </div>
-              {form.reserve_repack_date && <RepackCountdown date={form.reserve_repack_date} />}
+              {form.reserve_repack_date && (
+                <RepackCountdown date={form.reserve_repack_date} />
+              )}
             </div>
           </Field>
         </CardContent>
@@ -703,7 +759,7 @@ export function ProfileEditForm({
       <Button type="submit" disabled={saving || resolvingDz} className="w-full">
         {saving || resolvingDz ? (
           <>
-            <Loader2 size={14} className="animate-spin mr-1" /> Saving…
+            <Loader2 size={14} className="mr-1 animate-spin" /> Saving…
           </>
         ) : (
           "Save Changes"
@@ -724,8 +780,8 @@ export function ProfileEditForm({
                 <Sun size={16} className="text-muted-foreground" />
               )}
               <div>
-                <Label className="text-sm text-foreground">Dark mode</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <Label className="text-foreground text-sm">Dark mode</Label>
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {theme === "dark" ? "Using dark theme" : "Using light theme"}
                 </p>
               </div>
@@ -738,8 +794,8 @@ export function ProfileEditForm({
           <Separator />
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-sm text-foreground">Imperial units</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <Label className="text-foreground text-sm">Imperial units</Label>
+              <p className="text-muted-foreground mt-0.5 text-xs">
                 Feet · MPH · °F
               </p>
             </div>
@@ -748,7 +804,7 @@ export function ProfileEditForm({
               onCheckedChange={(v) => persistUnits(v ? "imperial" : "metric")}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {units === "imperial"
               ? "Showing imperial — altitudes in ft, speeds in mph."
               : "Showing metric — altitudes in m, speeds in m/s."}
@@ -764,8 +820,8 @@ export function ProfileEditForm({
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-sm text-foreground">Delete My Data</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <Label className="text-foreground text-sm">Delete My Data</Label>
+              <p className="text-muted-foreground mt-0.5 text-xs">
                 Permanently delete your account and all data
               </p>
             </div>
@@ -773,16 +829,28 @@ export function ProfileEditForm({
               variant="destructive"
               size="sm"
               onClick={async () => {
-                if (!confirm("This will permanently delete your account, all jump data, telemetry, and profile. This cannot be undone. Are you sure?")) return;
+                if (
+                  !confirm(
+                    "This will permanently delete your account, all jump data, telemetry, and profile. This cannot be undone. Are you sure?",
+                  )
+                )
+                  return;
                 try {
-                  const res = await fetch("/api/data-deletion", { method: "POST" });
+                  posthog.capture("account_deleted");
+                  const res = await fetch("/api/data-deletion", {
+                    method: "POST",
+                  });
                   if (res.ok) {
                     window.location.href = "/login?deleted=true";
                   } else {
-                    alert("Failed to delete account. Please contact support@uptime.pro");
+                    alert(
+                      "Failed to delete account. Please contact support@uptime.pro",
+                    );
                   }
                 } catch {
-                  alert("Failed to delete account. Please contact support@uptime.pro");
+                  alert(
+                    "Failed to delete account. Please contact support@uptime.pro",
+                  );
                 }
               }}
             >

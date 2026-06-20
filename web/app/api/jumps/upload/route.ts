@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { ingestJumpFile, type IngestResult } from "@/lib/dekunu/ingest";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * CSV + JSON summary upload endpoint — accepts one jump pair per request.
@@ -37,15 +38,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
   }
 
-  const file = (formData.get("file") ?? formData.getAll("files[]")[0]) as
-    | File
-    | null;
+  const file = (formData.get("file") ??
+    formData.getAll("files[]")[0]) as File | null;
 
   if (!file || !(file instanceof File)) {
-    return NextResponse.json(
-      { error: "No file uploaded" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
   if (!file.name.toLowerCase().endsWith(".csv")) {
@@ -80,6 +77,20 @@ export async function POST(request: NextRequest) {
     buffer,
     summaryBuffer,
   );
+
+  if (result.status === "created") {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: user.id,
+      event: "jump_ingested",
+      properties: {
+        file: result.file,
+        exit_altitude_m: result.meta?.exit_altitude_m ?? null,
+        freefall_duration_s: result.meta?.freefall_duration_s ?? null,
+        has_summary: !!summaryBuffer,
+      },
+    });
+  }
 
   return NextResponse.json({ results: [result] }, { status: 207 });
 }

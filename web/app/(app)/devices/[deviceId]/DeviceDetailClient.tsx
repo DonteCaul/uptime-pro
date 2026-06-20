@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,11 +49,10 @@ export function DeviceDetailClient({
 }) {
   const [activeTab, setActiveTab] = useState<Tab>(tab);
   const units = useUnits(serverUnits);
-  const router = useRouter();
 
   function switchTab(t: Tab) {
     setActiveTab(t);
-    router.replace(`/devices/${deviceUrlId}?tab=${t}`, { scroll: false });
+    window.location.href = `/devices/${deviceUrlId}?tab=${t}`;
   }
 
   return (

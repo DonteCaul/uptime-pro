@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +15,7 @@ import {
   type FormErrors,
 } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import {
-  resendConfirmation,
-  requestPasswordReset,
-} from "@/lib/actions/auth";
+import { resendConfirmation, requestPasswordReset } from "@/lib/actions/auth";
 
 type Mode = "login" | "register";
 type View = "form" | "verify-email" | "forgot-password" | "reset-sent";
@@ -74,10 +72,11 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
       const supabase = createBrowserSupabaseClient();
 
       if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const { data: signInData, error } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
         if (error) {
           // Supabase returns "Email not confirmed" when confirmation is
           // required and the user hasn't clicked the link yet.
@@ -95,6 +94,12 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
           }
           throw error;
         }
+        if (signInData.user) {
+          posthog.identify(signInData.user.id, {
+            email: signInData.user.email,
+          });
+          posthog.capture("user_signed_in", { email: signInData.user.email });
+        }
         router.push(redirect);
         router.refresh();
       } else {
@@ -104,6 +109,14 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
           options: { data: { full_name: fullName } },
         });
         if (error) throw error;
+
+        if (data.user) {
+          posthog.identify(data.user.id, {
+            email: data.user.email,
+            name: fullName,
+          });
+          posthog.capture("user_signed_up", { email: data.user.email });
+        }
 
         // If email confirmation is enabled, no session is returned — show
         // the "check your email" view. If confirmation is disabled, a
@@ -116,7 +129,9 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
         }
       }
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Something went wrong");
+      setSubmitError(
+        err instanceof Error ? err.message : "Something went wrong",
+      );
     } finally {
       setLoading(false);
     }
@@ -180,32 +195,34 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
     return (
       <AuthShell>
         <Card>
-          <CardContent className="pt-6 flex flex-col items-center text-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-2xl">
+          <CardContent className="flex flex-col items-center gap-3 pt-6 text-center">
+            <div className="bg-primary/15 border-primary/30 flex h-12 w-12 items-center justify-center rounded-full border text-2xl">
               📬
             </div>
-            <h2 className="text-lg font-bold text-foreground">Check your email</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-foreground text-lg font-bold">
+              Check your email
+            </h2>
+            <p className="text-muted-foreground text-sm">
               We sent a confirmation link to
               <br />
-              <span className="font-medium text-foreground">{email}</span>
+              <span className="text-foreground font-medium">{email}</span>
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Click the link in the email to verify your account, then sign in.
             </p>
 
             {submitError && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2 w-full">
+              <p className="text-destructive bg-destructive/10 border-destructive/30 w-full rounded-md border px-3 py-2 text-sm">
                 {submitError}
               </p>
             )}
             {info && (
-              <p className="text-sm text-primary bg-primary/10 border border-primary/30 rounded-md px-3 py-2 w-full">
+              <p className="text-primary bg-primary/10 border-primary/30 w-full rounded-md border px-3 py-2 text-sm">
                 {info}
               </p>
             )}
 
-            <div className="flex flex-col gap-2 w-full mt-2">
+            <div className="mt-2 flex w-full flex-col gap-2">
               <Button
                 variant="secondary"
                 onClick={handleResend}
@@ -239,13 +256,18 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
       <AuthShell>
         <Card>
           <CardHeader className="pb-0">
-            <h2 className="text-lg font-bold text-foreground">Reset password</h2>
-            <p className="text-xs text-muted-foreground">
+            <h2 className="text-foreground text-lg font-bold">
+              Reset password
+            </h2>
+            <p className="text-muted-foreground text-xs">
               Enter your email and we&apos;ll send a reset link.
             </p>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+            <form
+              onSubmit={handleForgotPassword}
+              className="flex flex-col gap-4"
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="fp-email">Email</Label>
                 <Input
@@ -259,12 +281,12 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                   aria-invalid={!!errors.email}
                 />
                 {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email}</p>
+                  <p className="text-destructive text-xs">{errors.email}</p>
                 )}
               </div>
 
               {submitError && (
-                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
+                <p className="text-destructive bg-destructive/10 border-destructive/30 rounded-md border px-3 py-2 text-sm">
                   {submitError}
                 </p>
               )}
@@ -297,13 +319,15 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
     return (
       <AuthShell>
         <Card>
-          <CardContent className="pt-6 flex flex-col items-center text-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center text-2xl">
+          <CardContent className="flex flex-col items-center gap-3 pt-6 text-center">
+            <div className="bg-primary/15 border-primary/30 flex h-12 w-12 items-center justify-center rounded-full border text-2xl">
               ✉️
             </div>
-            <h2 className="text-lg font-bold text-foreground">Reset link sent</h2>
-            <p className="text-sm text-muted-foreground">
-              Check <span className="font-medium text-foreground">{email}</span>{" "}
+            <h2 className="text-foreground text-lg font-bold">
+              Reset link sent
+            </h2>
+            <p className="text-muted-foreground text-sm">
+              Check <span className="text-foreground font-medium">{email}</span>{" "}
               for a password-reset link. It expires in 1 hour.
             </p>
             <Button
@@ -327,26 +351,26 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
   return (
     <AuthShell>
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-card border border-border mb-4">
-            <span className="text-3xl text-primary">⬡</span>
+        <div className="mb-8 text-center">
+          <div className="bg-card border-border mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl border">
+            <span className="text-primary text-3xl">⬡</span>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">UpTime.Pro</h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <h1 className="text-foreground text-2xl font-bold">UpTime.Pro</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             Your personal jump logbook
           </p>
         </div>
 
         <Card>
           <CardHeader className="pb-0">
-            <div className="flex bg-muted rounded-md p-1 gap-1">
+            <div className="bg-muted flex gap-1 rounded-md p-1">
               {(["login", "register"] as const).map((m) => (
                 <button
                   key={m}
                   type="button"
                   onClick={() => switchMode(m)}
                   className={cn(
-                    "flex-1 py-1.5 rounded text-sm font-medium transition-colors",
+                    "flex-1 rounded py-1.5 text-sm font-medium transition-colors",
                     mode === m
                       ? "bg-card text-foreground shadow-sm"
                       : "text-muted-foreground hover:text-foreground",
@@ -358,7 +382,11 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
             </div>
           </CardHeader>
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col gap-4"
+              noValidate
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -374,7 +402,7 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                   disabled={loading}
                 />
                 {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email}</p>
+                  <p className="text-destructive text-xs">{errors.email}</p>
                 )}
               </div>
 
@@ -393,7 +421,7 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                     disabled={loading}
                   />
                   {errors.name && (
-                    <p className="text-xs text-destructive">{errors.name}</p>
+                    <p className="text-destructive text-xs">{errors.name}</p>
                   )}
                 </div>
               )}
@@ -409,7 +437,7 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                         setErrors({});
                         setSubmitError(null);
                       }}
-                      className="text-xs text-primary hover:underline"
+                      className="text-primary text-xs hover:underline"
                     >
                       Forgot?
                     </button>
@@ -430,10 +458,10 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                   disabled={loading}
                 />
                 {errors.password ? (
-                  <p className="text-xs text-destructive">{errors.password}</p>
+                  <p className="text-destructive text-xs">{errors.password}</p>
                 ) : (
                   mode === "register" && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       At least 8 characters
                     </p>
                   )
@@ -441,7 +469,7 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
               </div>
 
               {submitError && (
-                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2">
+                <p className="text-destructive bg-destructive/10 border-destructive/30 rounded-md border px-3 py-2 text-sm">
                   {submitError}
                 </p>
               )}
@@ -454,7 +482,6 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
                     : "Create Account"}
               </Button>
             </form>
-
           </CardContent>
         </Card>
       </div>
@@ -465,7 +492,7 @@ export function LoginForm({ initialMode = "login" }: { initialMode?: Mode }) {
 /** Shared centered layout for all auth views. */
 function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+    <div className="bg-background flex min-h-screen flex-col items-center justify-center px-4">
       {children}
     </div>
   );

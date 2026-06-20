@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/db/types";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * System log upload — accepts one .txt file per request.
@@ -17,8 +18,7 @@ import type { Database } from "@/lib/db/types";
  */
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-type SystemLogInsert =
-  Database["public"]["Tables"]["system_logs"]["Insert"];
+type SystemLogInsert = Database["public"]["Tables"]["system_logs"]["Insert"];
 
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient();
@@ -37,9 +37,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Accept either `file` (single-file) or `files[]` (legacy multi-file) key.
-  const file = (formData.get("file") ?? formData.getAll("files[]")[0]) as
-    | File
-    | null;
+  const file = (formData.get("file") ??
+    formData.getAll("files[]")[0]) as File | null;
 
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
@@ -95,6 +94,18 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: user.id,
+    event: "log_ingested",
+    properties: {
+      file: file.name,
+      source,
+      log_number: logNumber,
+      has_device: !!dbDeviceId,
+    },
+  });
 
   return NextResponse.json(
     {

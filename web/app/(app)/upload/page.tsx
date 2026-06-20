@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useMemo } from "react";
+import posthog from "posthog-js";
 import {
   CheckCircle,
   AlertCircle,
@@ -59,12 +60,12 @@ function JumpResultItem({ r }: { r: IngestResult }) {
       ? "text-yellow-500"
       : "text-destructive";
   return (
-    <div className="flex items-start gap-2 py-2.5 border-b border-border last:border-0 text-sm">
-      <Icon size={15} className={cn("shrink-0 mt-0.5", color)} />
+    <div className="border-border flex items-start gap-2 border-b py-2.5 text-sm last:border-0">
+      <Icon size={15} className={cn("mt-0.5 shrink-0", color)} />
       <div className="min-w-0">
         <p className="text-foreground truncate">{r.file}</p>
         {isOk && r.meta?.exit_altitude_m && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Exit {Math.round(r.meta.exit_altitude_m)}m
             {r.meta.freefall_duration_s
               ? ` · ${Math.round(r.meta.freefall_duration_s)}s FF`
@@ -72,7 +73,7 @@ function JumpResultItem({ r }: { r: IngestResult }) {
           </p>
         )}
         {isDup && <p className="text-xs text-yellow-600">Already uploaded</p>}
-        {r.error && <p className="text-xs text-destructive">{r.error}</p>}
+        {r.error && <p className="text-destructive text-xs">{r.error}</p>}
       </div>
     </div>
   );
@@ -80,11 +81,11 @@ function JumpResultItem({ r }: { r: IngestResult }) {
 
 function LogResultItem({ r }: { r: LogResult }) {
   return (
-    <div className="flex items-start gap-2 py-2.5 border-b border-border last:border-0 text-sm">
-      <CheckCircle size={15} className="shrink-0 mt-0.5 text-primary" />
+    <div className="border-border flex items-start gap-2 border-b py-2.5 text-sm last:border-0">
+      <CheckCircle size={15} className="text-primary mt-0.5 shrink-0" />
       <div className="min-w-0">
         <p className="text-foreground truncate">{r.file}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           {r.source}
           {r.log_number != null ? ` #${r.log_number}` : ""}
         </p>
@@ -107,12 +108,17 @@ function pairFiles(files: File[]): FilePair[] {
 
   return csvs.map((csv) => {
     const summaryName = `s_${csv.name.replace(/\.csv$/i, ".json")}`;
-    const summary = jsons.get(summaryName) ?? jsons.get(summaryName.toLowerCase());
+    const summary =
+      jsons.get(summaryName) ?? jsons.get(summaryName.toLowerCase());
     return { csv, summary };
   });
 }
 
-const DEKUNU_MODE_OPTIONS: { value: DekunuMode; label: string; description: string }[] = [
+const DEKUNU_MODE_OPTIONS: {
+  value: DekunuMode;
+  label: string;
+  description: string;
+}[] = [
   { value: "jumps", label: "Jump Logs", description: "CSV + JSON pairs" },
   { value: "summaries", label: "Update Jumps", description: "JSON only" },
   { value: "logs", label: "System Logs", description: "TXT files" },
@@ -129,18 +135,18 @@ export default function UploadPage() {
   });
   const [jumpResults, setJumpResults] = useState<IngestResult[]>([]);
   const [logResults, setLogResults] = useState<LogResult[]>([]);
-  const [summaryResults, setSummaryResults] = useState<SummaryUpdateResult[]>([]);
+  const [summaryResults, setSummaryResults] = useState<SummaryUpdateResult[]>(
+    [],
+  );
   const [globalError, setGlobalError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRefs = useRef<Map<number, AbortController>>(new Map());
+  const cancelledRef = useRef(false);
 
   const uploading = uploadState.active.length > 0;
 
-  const ext = mode === "jumps"
-    ? ".csv,.json"
-    : mode === "logs"
-      ? ".txt"
-      : ".json";
+  const ext =
+    mode === "jumps" ? ".csv,.json" : mode === "logs" ? ".txt" : ".json";
 
   // Build file pairs for validation and display (jump logs only).
   const pairs = useMemo(() => {
@@ -151,9 +157,7 @@ export default function UploadPage() {
   // Check for CSVs missing their summary JSON (jump logs only).
   const missingSummaries = useMemo(() => {
     if (!pairs) return [];
-    return pairs
-      .filter((p) => !p.summary)
-      .map((p) => p.csv.name);
+    return pairs.filter((p) => !p.summary).map((p) => p.csv.name);
   }, [pairs]);
 
   function switchMode(next: DekunuMode) {
@@ -195,9 +199,11 @@ export default function UploadPage() {
   }
 
   const handleCancel = useCallback(() => {
+    cancelledRef.current = true;
+    posthog.capture("upload_cancelled", { mode });
     setUploadState((s) => ({ ...s, cancelled: true }));
     abortRefs.current.forEach((ac) => ac.abort());
-  }, []);
+  }, [mode]);
 
   async function handleUpload() {
     if (!files.length) return;
@@ -210,7 +216,12 @@ export default function UploadPage() {
       return;
     }
 
-    setUploadState({ active: [], completed: new Set<number>(), cancelled: false });
+    cancelledRef.current = false;
+    setUploadState({
+      active: [],
+      completed: new Set<number>(),
+      cancelled: false,
+    });
     setJumpResults([]);
     setLogResults([]);
     setSummaryResults([]);
@@ -225,7 +236,27 @@ export default function UploadPage() {
       await uploadDekunuPairs();
     }
 
-    setUploadState({ active: [], completed: new Set<number>(), cancelled: false });
+    if (!cancelledRef.current) {
+      if (mode === "jumps") {
+        posthog.capture("jump_files_uploaded", {
+          files_count: uploadItemCount,
+        });
+      } else if (mode === "logs") {
+        posthog.capture("system_logs_uploaded", {
+          files_count: uploadItemCount,
+        });
+      } else if (mode === "summaries") {
+        posthog.capture("jump_summaries_updated", {
+          files_count: uploadItemCount,
+        });
+      }
+    }
+
+    setUploadState({
+      active: [],
+      completed: new Set<number>(),
+      cancelled: false,
+    });
     setFiles([]);
   }
 
@@ -264,7 +295,8 @@ export default function UploadPage() {
         }
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? `Upload failed (${res.status})`);
+        if (!res.ok)
+          throw new Error(data.error ?? `Upload failed (${res.status})`);
 
         const result = data.results?.[0] ?? {
           file: p[i].csv.name,
@@ -275,15 +307,16 @@ export default function UploadPage() {
         setJumpResults(
           results.filter(
             (r): r is IngestResult =>
-              r != null && "status" in r && typeof (r as IngestResult).status === "string",
+              r != null &&
+              "status" in r &&
+              typeof (r as IngestResult).status === "string",
           ),
         );
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           setUploadState((s) => ({ ...s, cancelled: true }));
         } else {
-          const errorMsg =
-            err instanceof Error ? err.message : "Upload failed";
+          const errorMsg = err instanceof Error ? err.message : "Upload failed";
           results[i] = {
             file: p[i].csv.name,
             status: "error",
@@ -292,7 +325,9 @@ export default function UploadPage() {
           setJumpResults(
             results.filter(
               (r): r is IngestResult =>
-                r != null && "status" in r && typeof (r as IngestResult).status === "string",
+                r != null &&
+                "status" in r &&
+                typeof (r as IngestResult).status === "string",
             ),
           );
         }
@@ -324,7 +359,9 @@ export default function UploadPage() {
   async function uploadSummaries() {
     const jsons = files.filter((f) => f.name.toLowerCase().endsWith(".json"));
     const endpoint = "/api/jumps/update-summary";
-    const results: (SummaryUpdateResult | null)[] = new Array(jsons.length).fill(null);
+    const results: (SummaryUpdateResult | null)[] = new Array(
+      jsons.length,
+    ).fill(null);
     let nextIndex = 0;
 
     async function uploadFile(i: number) {
@@ -426,7 +463,8 @@ export default function UploadPage() {
         }
 
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? `Upload failed (${res.status})`);
+        if (!res.ok)
+          throw new Error(data.error ?? `Upload failed (${res.status})`);
 
         const result = data.results?.[0] ?? {
           file: txts[i].name,
@@ -484,11 +522,11 @@ export default function UploadPage() {
       ? files.filter((f) => f.name.toLowerCase().endsWith(".txt")).length
       : mode === "summaries"
         ? files.filter((f) => f.name.toLowerCase().endsWith(".json")).length
-        : pairs?.length ?? 0;
+        : (pairs?.length ?? 0);
 
   return (
     <div className="flex flex-col gap-5 pb-4">
-      <h2 className="text-xl font-bold text-foreground">Upload</h2>
+      <h2 className="text-foreground text-xl font-bold">Upload</h2>
 
       {/* Dekunu mode selector */}
       {!uploading && (
@@ -496,7 +534,7 @@ export default function UploadPage() {
           <select
             value={mode}
             onChange={(e) => switchMode(e.target.value as DekunuMode)}
-            className="w-full rounded-md border border-border bg-input text-foreground text-sm px-3 py-2 appearance-none pr-8 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="border-border bg-input text-foreground focus:ring-ring w-full appearance-none rounded-md border px-3 py-2 pr-8 text-sm focus:ring-1 focus:outline-none"
           >
             {DEKUNU_MODE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -506,52 +544,110 @@ export default function UploadPage() {
           </select>
           <ChevronDown
             size={14}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+            className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2"
           />
         </div>
       )}
 
       {/* Mode description */}
       <Card className="bg-muted/40">
-        <CardContent className="pt-3 pb-3 px-4 text-xs text-muted-foreground leading-relaxed space-y-2">
+        <CardContent className="text-muted-foreground space-y-2 px-4 pt-3 pb-3 text-xs leading-relaxed">
           {mode === "jumps" && (
             <>
               <p>
-                <strong className="text-foreground">Getting your files:</strong> Connect your Dekunu to your computer via USB. In the device's USB settings, enable{" "}
-                <strong className="text-foreground">Mass Storage / USB File Transfer mode</strong>. The Dekunu will mount as a removable drive. CSV files live in the{" "}
-                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">action/</code> folder and JSON files live in the{" "}
-                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">summaries/</code> folder. You'll see pairs like:
+                <strong className="text-foreground">Getting your files:</strong>{" "}
+                Connect your Dekunu to your computer via USB. In the device's
+                USB settings, enable{" "}
+                <strong className="text-foreground">
+                  Mass Storage / USB File Transfer mode
+                </strong>
+                . The Dekunu will mount as a removable drive. CSV files live in
+                the{" "}
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  action/
+                </code>{" "}
+                folder and JSON files live in the{" "}
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  summaries/
+                </code>{" "}
+                folder. You'll see pairs like:
               </p>
-              <ul className="list-disc list-inside space-y-1 pl-1">
-                <li><code className="bg-muted px-1 py-0.5 rounded text-[11px]">action/</code> → <code className="bg-muted px-1 py-0.5 rounded text-[11px]">action_469_20190112_1910-240.csv</code> — raw sensor data</li>
-                <li><code className="bg-muted px-1 py-0.5 rounded text-[11px]">summaries/</code> → <code className="bg-muted px-1 py-0.5 rounded text-[11px]">s_action_469_20190112_1910-240.json</code> — summary with altitudes, discipline, GPS, etc.</li>
+              <ul className="list-inside list-disc space-y-1 pl-1">
+                <li>
+                  <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                    action/
+                  </code>{" "}
+                  →{" "}
+                  <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                    action_469_20190112_1910-240.csv
+                  </code>{" "}
+                  — raw sensor data
+                </li>
+                <li>
+                  <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                    summaries/
+                  </code>{" "}
+                  →{" "}
+                  <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                    s_action_469_20190112_1910-240.json
+                  </code>{" "}
+                  — summary with altitudes, discipline, GPS, etc.
+                </li>
               </ul>
               <p>
-                <strong className="text-foreground">To upload:</strong> Select both the CSV and its matching JSON for each jump. The JSON provides accurate metadata while the CSV contains the full telemetry track. Both must be present.
+                <strong className="text-foreground">To upload:</strong> Select
+                both the CSV and its matching JSON for each jump. The JSON
+                provides accurate metadata while the CSV contains the full
+                telemetry track. Both must be present.
               </p>
             </>
           )}
           {mode === "summaries" && (
             <>
               <p>
-                <strong className="text-foreground">Getting your files:</strong> Same USB extraction — the <code className="bg-muted px-1 py-0.5 rounded text-[11px]">s_action_*.json</code> files live in the{" "}
-                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">summaries/</code> folder on the Dekunu drive.
+                <strong className="text-foreground">Getting your files:</strong>{" "}
+                Same USB extraction — the{" "}
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  s_action_*.json
+                </code>{" "}
+                files live in the{" "}
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  summaries/
+                </code>{" "}
+                folder on the Dekunu drive.
               </p>
               <p>
-                <strong className="text-foreground">To upload:</strong> Select only the JSON summary files. This mode updates existing jumps that were already uploaded (e.g. missing metadata like discipline or GPS coordinates) without re-uploading the full sensor data. The system matches each JSON to its jump by filename.
+                <strong className="text-foreground">To upload:</strong> Select
+                only the JSON summary files. This mode updates existing jumps
+                that were already uploaded (e.g. missing metadata like
+                discipline or GPS coordinates) without re-uploading the full
+                sensor data. The system matches each JSON to its jump by
+                filename.
               </p>
             </>
           )}
           {mode === "logs" && (
             <>
               <p>
-                <strong className="text-foreground">Getting your files:</strong> Via USB in Mass Storage mode, look in the{" "}
-                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">sysLogs/</code> folder on the Dekunu drive. Files are named like{" "}
-                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">syslog.N.txt</code> or{" "}
-                <code className="bg-muted px-1 py-0.5 rounded text-[11px]">syslog_esp32.N.txt</code>.
+                <strong className="text-foreground">Getting your files:</strong>{" "}
+                Via USB in Mass Storage mode, look in the{" "}
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  sysLogs/
+                </code>{" "}
+                folder on the Dekunu drive. Files are named like{" "}
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  syslog.N.txt
+                </code>{" "}
+                or{" "}
+                <code className="bg-muted rounded px-1 py-0.5 text-[11px]">
+                  syslog_esp32.N.txt
+                </code>
+                .
               </p>
               <p>
-                <strong className="text-foreground">To upload:</strong> Select the TXT files to ingest device system logs for debugging and diagnostics.
+                <strong className="text-foreground">To upload:</strong> Select
+                the TXT files to ingest device system logs for debugging and
+                diagnostics.
               </p>
             </>
           )}
@@ -569,7 +665,7 @@ export default function UploadPage() {
           onDrop={onDrop}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            "border-2 border-dashed rounded-lg p-10 text-center cursor-pointer transition-colors",
+            "cursor-pointer rounded-lg border-2 border-dashed p-10 text-center transition-colors",
             dragging
               ? "border-primary bg-primary/5"
               : "border-border hover:border-muted-foreground",
@@ -577,16 +673,16 @@ export default function UploadPage() {
         >
           <UploadIcon
             size={28}
-            className="mx-auto mb-3 text-muted-foreground"
+            className="text-muted-foreground mx-auto mb-3"
           />
-          <p className="text-foreground font-medium text-sm">
+          <p className="text-foreground text-sm font-medium">
             {mode === "jumps"
               ? "Drop CSV + JSON pairs here"
               : mode === "summaries"
                 ? "Drop summary JSON files here"
                 : "Drop TXT files here"}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-xs">
             {mode === "jumps"
               ? "action_*.csv and s_action_*.json files"
               : mode === "summaries"
@@ -607,15 +703,15 @@ export default function UploadPage() {
       {/* Selected files — shown before upload starts */}
       {files.length > 0 && !uploading && (
         <Card>
-          <CardContent className="pt-3 pb-1 px-4">
-            <p className="text-xs text-muted-foreground pb-2">
+          <CardContent className="px-4 pt-3 pb-1">
+            <p className="text-muted-foreground pb-2 text-xs">
               {files.length} file{files.length > 1 ? "s" : ""} selected
             </p>
             {files.map((f, i) => (
               <div
                 key={`${f.name}-${i}`}
                 className={cn(
-                  "flex items-center justify-between py-2 border-b border-border last:border-0",
+                  "border-border flex items-center justify-between border-b py-2 last:border-0",
                   // Highlight orphan CSVs (no matching JSON) for jump logs.
                   mode === "jumps" &&
                     f.name.toLowerCase().endsWith(".csv") &&
@@ -623,14 +719,14 @@ export default function UploadPage() {
                     "bg-yellow-500/5",
                 )}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm text-foreground truncate">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-foreground truncate text-sm">
                     {f.name}
                   </span>
                   {mode === "jumps" &&
                     f.name.toLowerCase().endsWith(".csv") &&
                     missingSummaries.some((m) => m === f.name) && (
-                      <span className="text-[10px] text-yellow-600 bg-yellow-500/10 px-1.5 py-0.5 rounded shrink-0">
+                      <span className="shrink-0 rounded bg-yellow-500/10 px-1.5 py-0.5 text-[10px] text-yellow-600">
                         missing JSON
                       </span>
                     )}
@@ -668,9 +764,9 @@ export default function UploadPage() {
       {/* Progress indicator */}
       {uploading && (
         <Card>
-          <CardContent className="pt-3 px-4">
+          <CardContent className="px-4 pt-3">
             <div className="flex items-center gap-2 text-sm">
-              <Loader2 size={15} className="animate-spin text-primary" />
+              <Loader2 size={15} className="text-primary animate-spin" />
               <p className="text-foreground">
                 {activeCount === 1
                   ? `Uploading ${completedCount + 1} of ${uploadItemCount}`
@@ -685,7 +781,7 @@ export default function UploadPage() {
       {globalError && (
         <Card>
           <CardContent className="pt-3">
-            <p className="text-sm text-destructive">{globalError}</p>
+            <p className="text-destructive text-sm">{globalError}</p>
           </CardContent>
         </Card>
       )}
@@ -693,10 +789,11 @@ export default function UploadPage() {
       {/* Jump results — live as they complete */}
       {jumpResults.length > 0 && (
         <Card>
-          <CardContent className="pt-3 pb-1 px-4">
-            <p className="text-xs text-muted-foreground pb-2">
+          <CardContent className="px-4 pt-3 pb-1">
+            <p className="text-muted-foreground pb-2 text-xs">
               {jumpResults.filter((r) => r.status === "created").length} new ·{" "}
-              {jumpResults.filter((r) => r.status === "duplicate").length} duplicate
+              {jumpResults.filter((r) => r.status === "duplicate").length}{" "}
+              duplicate
               {jumpResults.filter((r) => r.status === "error").length > 0 &&
                 ` · ${jumpResults.filter((r) => r.status === "error").length} failed`}
               {uploading && " · uploading…"}
@@ -711,8 +808,8 @@ export default function UploadPage() {
       {/* Log results — live as they complete */}
       {logResults.length > 0 && (
         <Card>
-          <CardContent className="pt-3 pb-1 px-4">
-            <p className="text-xs text-muted-foreground pb-2">
+          <CardContent className="px-4 pt-3 pb-1">
+            <p className="text-muted-foreground pb-2 text-xs">
               {logResults.length} uploaded
               {uploading && " · uploading…"}
             </p>
@@ -726,26 +823,40 @@ export default function UploadPage() {
       {/* Summary update results */}
       {summaryResults.length > 0 && (
         <Card>
-          <CardContent className="pt-3 pb-1 px-4">
-            <p className="text-xs text-muted-foreground pb-2">
-              {summaryResults.filter((r) => r.status === "updated").length} updated
+          <CardContent className="px-4 pt-3 pb-1">
+            <p className="text-muted-foreground pb-2 text-xs">
+              {summaryResults.filter((r) => r.status === "updated").length}{" "}
+              updated
               {summaryResults.filter((r) => r.status === "error").length > 0 &&
                 ` · ${summaryResults.filter((r) => r.status === "error").length} failed`}
               {uploading && " · updating…"}
             </p>
             {summaryResults.map((r, i) => (
-              <div key={`${r.csv}-${i}`} className="flex items-start gap-2 py-2.5 border-b border-border last:border-0 text-sm">
+              <div
+                key={`${r.csv}-${i}`}
+                className="border-border flex items-start gap-2 border-b py-2.5 text-sm last:border-0"
+              >
                 {r.status === "updated" ? (
-                  <CheckCircle size={15} className="shrink-0 mt-0.5 text-primary" />
+                  <CheckCircle
+                    size={15}
+                    className="text-primary mt-0.5 shrink-0"
+                  />
                 ) : (
-                  <AlertCircle size={15} className="shrink-0 mt-0.5 text-destructive" />
+                  <AlertCircle
+                    size={15}
+                    className="text-destructive mt-0.5 shrink-0"
+                  />
                 )}
                 <div className="min-w-0">
                   <p className="text-foreground truncate">{r.csv}</p>
                   {r.status === "updated" && (
-                    <p className="text-xs text-muted-foreground">Jump metadata updated</p>
+                    <p className="text-muted-foreground text-xs">
+                      Jump metadata updated
+                    </p>
                   )}
-                  {r.error && <p className="text-xs text-destructive">{r.error}</p>}
+                  {r.error && (
+                    <p className="text-destructive text-xs">{r.error}</p>
+                  )}
                 </div>
               </div>
             ))}
