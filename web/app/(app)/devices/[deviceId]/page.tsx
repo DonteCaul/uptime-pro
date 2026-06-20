@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createServerClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { type UnitSystem } from "@/lib/units";
-import { DeviceJumpsClient } from "./DeviceJumpsClient";
+import { DeviceDetailClient } from "./DeviceDetailClient";
 
 export const dynamic = "force-dynamic";
 
@@ -26,14 +25,26 @@ interface JumpRow {
   max_freefall_speed_ms: number | null;
 }
 
+interface LogRow {
+  id: number;
+  log_source: string | null;
+  log_number: number | null;
+  uploaded_at: string;
+}
+
 export default async function DeviceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ deviceId: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { deviceId: deviceIdStr } = await params;
   const deviceId = parseInt(deviceIdStr, 10);
   if (Number.isNaN(deviceId)) notFound();
+
+  const params_ = await searchParams;
+  const tab = params_.tab === "logs" ? "logs" : "jumps";
 
   const supabase = await createServerClient();
 
@@ -67,6 +78,16 @@ export default async function DeviceDetailPage({
   };
   const jumps = jumpRows ?? [];
 
+  // System logs for this device.
+  const { data: logRows } = (await supabase
+    .from("system_logs")
+    .select("id, log_source, log_number, uploaded_at")
+    .eq("device_id", device.id)
+    .order("uploaded_at", { ascending: false })) as {
+    data: LogRow[] | null;
+  };
+  const logs = logRows ?? [];
+
   return (
     <div className="flex flex-col gap-4 pb-4">
       <div>
@@ -81,25 +102,25 @@ export default async function DeviceDetailPage({
         </h2>
         <p className="text-xs text-muted-foreground mt-0.5">
           ID {device.device_id}
-          {device.firmware_version ? ` · firmware ${device.firmware_version}` : ""}
-          {device.hardware_serial ? ` · serial ${device.hardware_serial}` : ""}
+          {device.firmware_version
+            ? ` · firmware ${device.firmware_version}`
+            : ""}
+          {device.hardware_serial
+            ? ` · serial ${device.hardware_serial}`
+            : ""}
           {device.last_seen_at
             ? ` · last seen ${new Date(device.last_seen_at).toLocaleDateString()}`
             : ""}
         </p>
       </div>
 
-      {jumps.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <p className="text-sm text-muted-foreground">
-              No jumps recorded from this device.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <DeviceJumpsClient jumps={jumps} serverUnits={units} />
-      )}
+      <DeviceDetailClient
+        tab={tab}
+        jumps={jumps}
+        logs={logs}
+        serverUnits={units}
+        deviceInternalId={device.id}
+      />
 
       <Button variant="ghost" asChild>
         <Link href="/devices">Back to devices</Link>
