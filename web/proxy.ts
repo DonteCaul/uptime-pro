@@ -50,7 +50,7 @@ export async function proxy(request: NextRequest) {
     "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline' https://api.mapbox.com https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com https://fonts.mapbox.com",
-    "img-src 'self' blob: data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.tiles.mapbox.com https://api.mapbox.com",
+    "img-src 'self' blob: data: https://*.supabase.co https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://*.tiles.mapbox.com https://api.mapbox.com",
     "connect-src 'self' https://*.supabase.co https://*.mapbox.com https://api.mapbox.com https://events.mapbox.com https://accounts.mapbox.com https://fonts.mapbox.com",
     "frame-src 'none'",
     "object-src 'none'",
