@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 import { smoothTrack } from "@/lib/smooth";
 import {
   ChevronLeft,
@@ -215,8 +213,10 @@ export function JumpDetailClient({
   const [terrain3d, setTerrain3d] = useState(false);
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mapRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const markerRef = useRef<any>(null);
   const rafRef = useRef<number | null>(null);
   const lastRafTime = useRef<number | null>(null);
   const playbackMs = useRef<number>(0); // exact time position in sample_ms units
@@ -233,7 +233,14 @@ export function JumpDetailClient({
     );
     if (!valid.length) return;
 
-    mapboxgl.accessToken = token;
+    let cancelled = false;
+
+    (async () => {
+      const mapboxgl = (await import("mapbox-gl")).default;
+      await import("mapbox-gl/dist/mapbox-gl.css");
+
+      if (cancelled) return;
+      mapboxgl.accessToken = token;
 
     const features: {
       type: "Feature";
@@ -410,13 +417,15 @@ export function JumpDetailClient({
         .addTo(map);
 
       setMapReady(true);
-    });
 
-    return () => {
-      map.remove();
-      mapRef.current = null;
-      markerRef.current = null;
-    };
+      return () => {
+        map.remove();
+        mapRef.current = null;
+        markerRef.current = null;
+      };
+    })();
+
+    return () => { cancelled = true; };
   }, [track]);
 
   // 3D terrain toggle.
